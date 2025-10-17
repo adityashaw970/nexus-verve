@@ -30,16 +30,7 @@ export default function LandingPage() {
         "https://player.vimeo.com/progressive_redirect/playback/831162360/rendition/720p/file.mp4?loc=external&signature=fe27313dcd4ea07fd5d87afd5938cd9465575663669ed4506feabf01de752392#t=0.001",
     },
   ];
-  const [Spline, setSpline] = useState(null);
 
-  useEffect(() => {
-    // Load Spline only in browser
-    const loadSpline = async () => {
-      const mod = await import("@splinetool/react-spline");
-      setSpline(() => mod.default);
-    };
-    loadSpline();
-  }, []);
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [Round] = useState(rounds);

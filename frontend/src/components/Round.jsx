@@ -637,9 +637,9 @@ const Round = () => {
           </>
         ) : (
           <div className="relative w-full h-screen overflow-hidden bg-black">
-            
+            <video autoPlay muted loop className="h-screen w-full object-cover z-10 inset-0" src="./landing.mp4"></video>
             {/* Overlay content */}
-            <div className="relative top-[50%] flex flex-col items-center justify-center text-center text-white animate-fade-in z-50">
+            <div className="absolute inset-0 flex top-[10%] flex-col items-center justify-center text-center text-white animate-fade-in z-50">
               <p className="text-3xl sm:text-3xl mb-8 font-medium">
                 Waiting for {roundName} questions...
               </p>

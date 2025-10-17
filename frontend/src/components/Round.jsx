@@ -136,14 +136,11 @@ const Round = () => {
       setTotalQuestions(questionData.totalQuestions || 0);
 
       // Set question time based on round configuration
-      const timeForQuestion =
-        questionData.round === 1
-          ? 30
-          : questionData.round === 2
-          ? 15
-          : questionData.round === 3
-          ? 20
-          : 30;
+      const timeForQuestion =questionData.round === 1? 30
+          : questionData.round === 2? 40
+          : questionData.round === 3? 60
+          : questionData.round === 4? 60
+          : 60;
       setQuestionTime(timeForQuestion);
       setTimeLeft(timeForQuestion);
 

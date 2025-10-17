@@ -24,7 +24,6 @@ const Round = () => {
   const [scoreMultiplier, setScoreMultiplier] = useState(1);
   const [questionTime, setQuestionTime] = useState(10);
 
-
   // Check authentication and get current round info
   useEffect(() => {
     const checkLoggedIn = async () => {
@@ -136,7 +135,16 @@ const Round = () => {
       setTotalQuestions(questionData.totalQuestions || 0);
 
       // Set question time based on round configuration
-      const timeForQuestion =questionData.round === 1? 30: questionData.round === 2? 40: questionData.round === 3? 60: questionData.round === 4? 60: 60;
+      const timeForQuestion =
+        questionData.round === 1
+          ? 30
+          : questionData.round === 2
+          ? 40
+          : questionData.round === 3
+          ? 60
+          : questionData.round === 4
+          ? 60
+          : 60;
       setQuestionTime(timeForQuestion);
       setTimeLeft(timeForQuestion);
 
@@ -525,8 +533,7 @@ const Round = () => {
               preload="metadata"
               poster="https://res.cloudinary.com/dke15c3sv/image/upload/v1760723161/landing_fqyvzy.jpg"
               className="h-screen w-full object-cover"
-          >
-        </video>
+            ></video>
             <div className="absolute flex flex-col items-center w-full lg:w-[90%] h-full lg:h-[45vw] lg:px-4 lg:py-11 space-y-2 bg-white/20 lg:rounded-3xl rounded-2xl border border-white/30 backdrop-blur-md shadow-2xl animate-fade-in overflow-y-auto">
               <div className="relative flex lg:flex-row flex-col items-center justify-between px-[1vh] lg:justify-between w-full lg:max-w-7xl lg:px-8 py-10 lg:py-5 space-y-4 lg:space-y-0">
                 <div className="text-center">

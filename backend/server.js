@@ -31,7 +31,7 @@ const QUIZ_CONFIG = {
     name: "Round 1",
     scoreMultiplier: 1,
     questionTime: 30000, // 30 seconds
-    startTime: "15 23 * * *",
+    startTime: "30 1 0* * *",
     questions: [
       // ===== Round 1 - Set 1 =====
       { day: "Day 1", round: "Round 1", set: 1, question: "What is the Japanese term for animation, often characterized by colorful artwork, fantastical themes, and vibrant characters?", answer: "Anime" },

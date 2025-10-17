@@ -20,7 +20,7 @@ export default function LandingPage() {
       title: "Round 3",
       start: true,
       completed: false,
-      video: "/short2.mp4",
+      video: "https://res.cloudinary.com/dke15c3sv/video/upload/v1760723087/short2_xhyvq9.mp4",
     },
     {
       title: "Bonus Round",
@@ -151,12 +151,16 @@ export default function LandingPage() {
     <>
       <div className="w-full overflow-hidden h-screen bg-gray-800 font-[Game_of_Squids] relative">
         <video
-          src="/landing.mp4"
-          autoPlay
-          loop
-          muted
-          className="h-screen w-full object-cover"
-        ></video>
+            src="https://res.cloudinary.com/dke15c3sv/video/upload/v1760723119/landing_wxbihl.mp4"
+            autoPlay
+            loop
+            muted
+            preload="metadata"
+            poster="https://res.cloudinary.com/dke15c3sv/image/upload/v1760723161/landing_fqyvzy.jpg"
+            className="h-screen w-full object-cover"
+          >
+        </video>
+
         <div className="absolute lg:top-[0vw] lg:left-[5vw] z-10 top-[10vw] left-[2vw]">
           <img
             src="https://www.radionitroz.in/assets/rnlogo-BNXsDXYE.png"
@@ -310,13 +314,18 @@ export default function LandingPage() {
             {/* Leaderboard Header */}
             <div className="w-full flex flex-col items-center text-white my-[5vh] lg:my-[2vw]">
               <div className="lg:rounded-[4vw] rounded-full overflow-hidden lg:h-[10vw] h-[20vh] w-[20vh] lg:w-[10vw] cursor-pointer relative">
-                <video
-                  className="object-cover w-full h-full"
-                  src="./trophy.mp4"
-                  autoPlay
-                  muted
-                  loop
-                />
+                
+                 <video
+                    src="https://res.cloudinary.com/dke15c3sv/video/upload/v1760723100/trophy_pkjqvp.mp4"
+                    autoPlay
+                    loop
+                    muted
+                    controls
+                    preload="metadata"
+                    poster=""
+                    className="h-screen w-full object-cover"
+                  >
+                </video>
               </div>
               <h2 className="text-[5vh] lg:text-[2.5vw] font-bold uppercase text-center mt-[2vw] font-[GilM]">
                 Leaderboard

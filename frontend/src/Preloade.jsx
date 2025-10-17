@@ -21,7 +21,7 @@ const Preloader = ({ onLoadComplete }) => {
   return (
     <div className="preloader-container">
       <video autoPlay loop muted className="preloader-video">
-        <source src="/pre2.mp4" type="video/mp4" />
+        <source src="https://res.cloudinary.com/dke15c3sv/video/upload/v1760723085/pre2_zygguv.mp4" type="video/mp4" />
         Your browser does not support the video tag.
       </video>
       <div className="preloader-text-box">

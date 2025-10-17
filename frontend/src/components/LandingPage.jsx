@@ -192,7 +192,7 @@ export default function LandingPage() {
               </h1>
               <video
                 className="object-cover object-[50%_0%] w-full h-full"
-                src="./trophy.mp4"
+                src="https://res.cloudinary.com/dke15c3sv/video/upload/v1760723100/trophy_pkjqvp.mp4"
                 autoPlay
                 muted
                 loop
@@ -320,10 +320,9 @@ export default function LandingPage() {
                     autoPlay
                     loop
                     muted
-                    controls
                     preload="metadata"
                     poster=""
-                    className="h-screen w-full object-cover"
+                    className="lg:h-[10vw] lg:w-[10vw] object-cover h-[20vh] w-[20vh]"
                   >
                 </video>
               </div>

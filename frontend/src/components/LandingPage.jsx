@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import Spline from "@splinetool/react-spline";
 
 export default function LandingPage() {
   let rounds = [

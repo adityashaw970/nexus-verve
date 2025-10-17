@@ -23,13 +23,7 @@ const Round = () => {
   const [roundName, setRoundName] = useState("Round 1");
   const [scoreMultiplier, setScoreMultiplier] = useState(1);
   const [questionTime, setQuestionTime] = useState(10);
-  const [Spline, setSpline] = useState(null);
 
-  useEffect(() => {
-    import("@splinetool/react-spline").then((mod) =>
-      setSpline(() => mod.default)
-    );
-  }, []);
 
   // Check authentication and get current round info
   useEffect(() => {
@@ -646,15 +640,7 @@ const Round = () => {
           </>
         ) : (
           <div className="relative w-full h-screen overflow-hidden bg-black">
-            {/* Full-screen Spline */}
-            {Spline ? (
-              <Spline
-                scene="https://prod.spline.design/p6QFRYbojzG6GZIn/scene.splinecode"
-                className="absolute inset-0 w-full h-full"
-              />
-            ) : (
-              <p>Loading 3D scene...</p>
-            )}
+            
             {/* Overlay content */}
             <div className="relative top-[50%] flex flex-col items-center justify-center text-center text-white animate-fade-in z-50">
               <p className="text-3xl sm:text-3xl mb-8 font-medium">

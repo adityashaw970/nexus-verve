@@ -1,0 +1,207 @@
+/* Import Font */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&display=swap');
+
+/* Global Reset */
+
+
+/* Preloader Container */
+.preloader-container {
+  width: 100%;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  background: #000;
+  animation: zoomOut 0.8s ease-out forwards;
+  animation-delay: 6s;
+  overflow: hidden;
+}
+
+/* Video Background */
+.preloader-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  top: 0;
+  left: 0;
+  animation: videoZoom 7s ease-in-out forwards;
+}
+
+/* Text Box Overlay */
+.preloader-text-box {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: #000;
+  height: 100%;
+  width: 100%;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  font-size: clamp(40px, 10vw, 100px);
+  font-weight: 900;
+  mix-blend-mode: multiply;
+  gap: 30px;
+  animation: textZoomPulse 7s ease-in-out forwards;
+  padding: 0 20px;
+}
+
+.preloader-text-box h1 {
+  margin: 0;
+  letter-spacing: 5px;
+  animation: letterSpacing 3s ease-in-out infinite alternate;
+  text-align: center;
+  word-break: break-word;
+}
+
+/* Loader Spinner */
+
+
+/* Zoom In Effect for Video */
+@keyframes videoZoom {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1.2);
+  }
+}
+
+/* Text Zoom and Pulse Effect */
+@keyframes textZoomPulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  10% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  85% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Letter Spacing Animation */
+@keyframes letterSpacing {
+  0% {
+    letter-spacing: 5px;
+  }
+  100% {
+    letter-spacing: clamp(10px, 2vw, 15px);
+  }
+}
+
+/* Spinner Spin */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Spinner Grow Effect */
+@keyframes spinnerGrow {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.2);
+  }
+}
+
+/* Zoom Out and Fade Effect for Container */
+@keyframes zoomOut {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* Responsive Breakpoints */
+
+/* Tablets and Small Laptops (768px - 1024px) */
+@media (max-width: 1024px) {
+  .preloader-text-box {
+    font-size: clamp(35px, 8vw, 80px);
+    gap: 25px;
+  }
+  
+  .preloader-text-box h1 {
+    letter-spacing: 3px;
+  }
+}
+
+/* Mobile Devices (up to 768px) */
+@media (max-width: 768px) {
+  .preloader-text-box {
+    font-size: clamp(30px, 8vw, 60px);
+    gap: 20px;
+    padding: 0 15px;
+  }
+  
+  .preloader-text-box h1 {
+    letter-spacing: 2px;
+  }
+  
+
+}
+
+/* Small Mobile Devices (up to 480px) */
+@media (max-width: 480px) {
+  .preloader-text-box {
+    font-size: clamp(25px, 10vw, 45px);
+    gap: 15px;
+  }
+  
+  .preloader-text-box h1 {
+    letter-spacing: 1px;
+  }
+  
+  
+  
+  @keyframes letterSpacing {
+    0% {
+      letter-spacing: 1px;
+    }
+    100% {
+      letter-spacing: 5px;
+    }
+  }
+}
+
+/* Very Small Devices (up to 360px) */
+@media (max-width: 360px) {
+  .preloader-text-box {
+    font-size: clamp(20px, 12vw, 35px);
+    gap: 12px;
+  }
+  
+ 
+}
+
+/* Landscape Orientation on Mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+  .preloader-text-box {
+    font-size: clamp(25px, 6vh, 50px);
+    gap: 15px;
+  }
+  
+ 
+}

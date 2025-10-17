@@ -136,11 +136,7 @@ const Round = () => {
       setTotalQuestions(questionData.totalQuestions || 0);
 
       // Set question time based on round configuration
-      const timeForQuestion =questionData.round === 1? 30
-          : questionData.round === 2? 40
-          : questionData.round === 3? 60
-          : questionData.round === 4? 60
-          : 60;
+      const timeForQuestion =questionData.round === 1? 30: questionData.round === 2? 40: questionData.round === 3? 60: questionData.round === 4? 60: 60;
       setQuestionTime(timeForQuestion);
       setTimeLeft(timeForQuestion);
 
@@ -522,13 +518,13 @@ const Round = () => {
             {/* Header */}
 
             <video
-            src="https://res.cloudinary.com/dke15c3sv/video/upload/v1760723119/landing_wxbihl.mp4"
-            autoPlay
-            loop
-            muted
-            preload="metadata"
-            poster="https://res.cloudinary.com/dke15c3sv/image/upload/v1760723161/landing_fqyvzy.jpg"
-            className="h-screen w-full object-cover"
+              src="https://res.cloudinary.com/dke15c3sv/video/upload/v1760723119/landing_wxbihl.mp4"
+              autoPlay
+              loop
+              muted
+              preload="metadata"
+              poster="https://res.cloudinary.com/dke15c3sv/image/upload/v1760723161/landing_fqyvzy.jpg"
+              className="h-screen w-full object-cover"
           >
         </video>
             <div className="absolute flex flex-col items-center w-full lg:w-[90%] h-full lg:h-[45vw] lg:px-4 lg:py-11 space-y-2 bg-white/20 lg:rounded-3xl rounded-2xl border border-white/30 backdrop-blur-md shadow-2xl animate-fade-in overflow-y-auto">
@@ -639,7 +635,13 @@ const Round = () => {
           </>
         ) : (
           <div className="relative w-full h-screen overflow-hidden bg-black">
-            <video autoPlay muted loop className="h-screen w-full object-cover z-10 inset-0" src="./landing.mp4"></video>
+            <video
+              autoPlay
+              muted
+              loop
+              className="h-screen w-full object-cover z-10 inset-0"
+              src="https://res.cloudinary.com/dke15c3sv/video/upload/v1760723119/landing_wxbihl.mp4"
+            ></video>
             {/* Overlay content */}
             <div className="absolute inset-0 flex top-[10%] flex-col items-center justify-center text-center text-white animate-fade-in z-50">
               <p className="text-3xl sm:text-3xl mb-8 font-medium">

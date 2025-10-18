@@ -652,7 +652,7 @@ const Round = () => {
               src="https://res.cloudinary.com/dke15c3sv/video/upload/v1760795224/Recording_2025-10-18_191130_amnqj3.mp4"
             ></video>
             {/* Overlay content */}
-            <div className="absolute inset-0 flex top-[10%] flex-col items-center justify-center text-center text-white animate-fade-in z-50">
+            <div className="absolute inset-0 flex top-[-40%] flex-col items-center justify-center text-center text-white animate-fade-in z-50">
               <p className="text-3xl sm:text-3xl mb-8 font-medium">
                 Waiting for {roundName} questions...
               </p>

@@ -165,7 +165,7 @@ const QUIZ_CONFIG = {
     name: "Round 2",
     scoreMultiplier: 2,
     questionTime: 40000, // 40 seconds
-    startTime: "06 19 * * *",
+    startTime: "*/10 */10 * * *",
     questions: [
       // ===== Round 2 - Set 1 =====
       {
@@ -299,7 +299,7 @@ const QUIZ_CONFIG = {
     name: "Round 3",
     scoreMultiplier: 3,
     questionTime: 60000, // 60 seconds
-    startTime: "35 02 * * *",
+    startTime: "*/30 */10 * * *",
     questions: [
       // ===== Round 3 - Set 1 =====
       {
@@ -431,7 +431,7 @@ const QUIZ_CONFIG = {
     name: "Bonus Round",
     scoreMultiplier: 5,
     questionTime: 60000, // 60 seconds
-    startTime: "35 03 * * *",
+    startTime: "*/35 */03 * * *",
     questions: [
       // ===== Bonus Round - Set 1 =====
       {

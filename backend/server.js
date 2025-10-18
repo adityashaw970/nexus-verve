@@ -32,7 +32,7 @@ const QUIZ_CONFIG = {
     name: "Round 1",
     scoreMultiplier: 1,
     questionTime: 30000, // 30 seconds
-    startTime: "*/43 */09 * * *",
+    startTime: "15 10 * * *",
     questions: [
       // ===== Round 1 - Set 1 =====
       {
@@ -165,7 +165,7 @@ const QUIZ_CONFIG = {
     name: "Round 2",
     scoreMultiplier: 2,
     questionTime: 40000, // 40 seconds
-    startTime: "*/10 */10 * * *",
+    startTime: "30 10 * * *",
     questions: [
       // ===== Round 2 - Set 1 =====
       {
@@ -299,7 +299,7 @@ const QUIZ_CONFIG = {
     name: "Round 3",
     scoreMultiplier: 3,
     questionTime: 60000, // 60 seconds
-    startTime: "*/30 */10 * * *",
+    startTime: "45 10 * * *",
     questions: [
       // ===== Round 3 - Set 1 =====
       {
@@ -431,7 +431,7 @@ const QUIZ_CONFIG = {
     name: "Bonus Round",
     scoreMultiplier: 5,
     questionTime: 60000, // 60 seconds
-    startTime: "*/35 */03 * * *",
+    startTime: "00 11 * * *",
     questions: [
       // ===== Bonus Round - Set 1 =====
       {

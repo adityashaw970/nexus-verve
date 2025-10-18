@@ -32,7 +32,7 @@ const QUIZ_CONFIG = {
     name: "Round 1",
     scoreMultiplier: 1,
     questionTime: 30000, // 30 seconds
-    startTime: "15 10 * * *",
+    startTime: "40 11 * * *",
     questions: [
       // ===== Round 1 - Set 1 =====
       {
@@ -165,7 +165,7 @@ const QUIZ_CONFIG = {
     name: "Round 2",
     scoreMultiplier: 2,
     questionTime: 40000, // 40 seconds
-    startTime: "30 10 * * *",
+    startTime: "00 12 * * *",
     questions: [
       // ===== Round 2 - Set 1 =====
       {

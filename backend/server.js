@@ -8,10 +8,11 @@ const mongoose = require("mongoose");
 const cookieParser = require("cookie-parser");
 const http = require("http");
 const { Server } = require("socket.io");
-const cron = require("node-cron");
 const userModel = require("./models/user");
 const quizResultModel = require("./models/quizResult");
 const roundResultModel = require("./models/roundResult");
+const cron = require("node-cron");
+const moment = require("moment-timezone");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -31,7 +32,7 @@ const QUIZ_CONFIG = {
     name: "Round 1",
     scoreMultiplier: 1,
     questionTime: 30000, // 30 seconds
-    startTime: "25 03 * * *",
+    startTime: "*/43 */09 * * *",
     questions: [
       // ===== Round 1 - Set 1 =====
       { day: "Day 1", round: "Round 1", set: 1, question: "What is the Japanese term for animation, often characterized by colorful artwork, fantastical themes, and vibrant characters?", answer: "Anime" },
@@ -572,29 +573,72 @@ app.get("/round-results/:round", async (req, res) => {
   }
 });
 
-// Start Quiz Manually (for testing)
+// // Start Quiz Manually (for testing)
+// app.post("/start-quiz/:round", (req, res) => {
+//   const round = parseInt(req.params.round);
+//   if (QUIZ_CONFIG[round]) {
+//     startQuiz(round);
+//     res.json({ message: `${QUIZ_CONFIG[round].name} started successfully` });
+//   } else {
+//     res.status(400).json({ error: "Invalid round number" });
+//   }
+// });
+// // Schedule All Rounds
+// Object.keys(QUIZ_CONFIG).forEach((roundNumber) => {
+//   const config = QUIZ_CONFIG[roundNumber];
+//   cron.schedule(config.startTime, () => {
+//     console.log(`Auto-starting ${config.name}`);
+//     startQuiz(parseInt(roundNumber));
+//   });
+// });
+
+
+
+
+
+
+// Server Start
+// Manual Quiz Start (For Testing)
 app.post("/start-quiz/:round", (req, res) => {
-  const round = parseInt(req.params.round);
-  if (QUIZ_CONFIG[round]) {
+  try {
+    const round = parseInt(req.params.round);
+
+    if (!QUIZ_CONFIG[round]) {
+      return res.status(400).json({ error: "Invalid round number" });
+    }
+
+    console.log(`[Manual Start] Starting quiz for Round ${round} at ${moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss")} IST`);
     startQuiz(round);
-    res.json({ message: `${QUIZ_CONFIG[round].name} started successfully` });
-  } else {
-    res.status(400).json({ error: "Invalid round number" });
+
+    res.json({ message: `${QUIZ_CONFIG[round].name} started successfully (manual trigger)` });
+  } catch (err) {
+    console.error("Error starting quiz manually:", err);
+    res.status(500).json({ error: "Failed to start quiz" });
   }
 });
 
-console.log(process.env.PORT);
-
-// Server Start
-server.listen(process.env.PORT || 5000, () => {
-  console.log("Server running on http://localhost:5000");
-});
-
-// Schedule All Rounds
+// Auto-Schedule All Rounds (IST Timezone)
 Object.keys(QUIZ_CONFIG).forEach((roundNumber) => {
   const config = QUIZ_CONFIG[roundNumber];
-  cron.schedule(config.startTime, () => {
-    console.log(`Auto-starting ${config.name}`);
-    startQuiz(parseInt(roundNumber));
-  });
+  const { startTime } = config; // e.g. "0 10 * * *" for 10:00 AM
+
+  // Ensure correct timezone
+  cron.schedule(
+    startTime,
+    () => {
+      console.log(`[Auto Start] Starting ${config.name} (Round ${roundNumber}) at ${moment().tz("Asia/Kolkata").format("YYYY-MM-DD HH:mm:ss")} IST`);
+      startQuiz(parseInt(roundNumber));
+    },
+    {
+      scheduled: true,
+      timezone: "Asia/Kolkata",
+    }
+  );
+  console.log(`✅ Scheduled ${config.name} at ${startTime} (Asia/Kolkata Time)`);
+});
+
+
+
+server.listen(process.env.PORT || 5000, () => {
+  console.log("Server running on http://localhost:5000");
 });

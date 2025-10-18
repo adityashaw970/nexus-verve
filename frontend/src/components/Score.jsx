@@ -12,13 +12,10 @@ const Score = () => {
     const checkAuthAndLoadData = async () => {
       try {
         // Check if user is logged in
-        const res = await fetch(
-          "https://nexus-verve.onrender.com/auth/status",
-          {
-            method: "GET",
-            credentials: "include",
-          }
-        );
+        const res = await fetch("http://localhost:5000/auth/status", {
+          method: "GET",
+          credentials: "include",
+        });
 
         const authData = await res.json();
 
@@ -54,7 +51,7 @@ const Score = () => {
   const fetchRoundData = async (round) => {
     try {
       const response = await fetch(
-        `https://nexus-verve.onrender.com/get-user-score?round=${round}`,
+        `http://localhost:5000/get-user-score?round=${round}`,
         {
           method: "GET",
           credentials: "include",
@@ -93,13 +90,10 @@ const Score = () => {
 
   const fetchTotalData = async () => {
     try {
-      const response = await fetch(
-        "https://nexus-verve.onrender.com/get-user-score",
-        {
-          method: "GET",
-          credentials: "include",
-        }
-      );
+      const response = await fetch("http://localhost:5000/get-user-score", {
+        method: "GET",
+        credentials: "include",
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -126,7 +120,7 @@ const Score = () => {
 
       for (const round of rounds) {
         const response = await fetch(
-          `https://nexus-verve.onrender.com/get-user-score?round=${round}`,
+          `http://localhost:5000/get-user-score?round=${round}`,
           {
             method: "GET",
             credentials: "include",

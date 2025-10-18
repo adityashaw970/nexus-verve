@@ -43,13 +43,10 @@ export default function LandingPage() {
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        const res = await fetch(
-          "https://nexus-verve.onrender.com/auth/status",
-          {
-            method: "GET",
-            credentials: "include",
-          }
-        );
+        const res = await fetch("http://localhost:5000/auth/status", {
+          method: "GET",
+          credentials: "include",
+        });
         const data = await res.json();
         setIsLoggedIn(data.loggedIn);
       } catch (error) {
@@ -65,13 +62,10 @@ export default function LandingPage() {
   useEffect(() => {
     const checkLoggedIn = async () => {
       try {
-        const res = await fetch(
-          "https://nexus-verve.onrender.com/auth/status",
-          {
-            method: "GET",
-            credentials: "include",
-          }
-        );
+        const res = await fetch("http://localhost:5000/auth/status", {
+          method: "GET",
+          credentials: "include",
+        });
         const msg = await res.json();
 
         if (window.location.href === "http://localhost:5173/") {
@@ -93,13 +87,10 @@ export default function LandingPage() {
     } else {
       setIsLeaderboardLoading(true);
       try {
-        const res = await fetch(
-          "https://nexus-verve.onrender.com/leaderboard",
-          {
-            method: "GET",
-            credentials: "include",
-          }
-        );
+        const res = await fetch("http://localhost:5000/leaderboard", {
+          method: "GET",
+          credentials: "include",
+        });
 
         if (res.ok) {
           const data = await res.json();

@@ -296,7 +296,7 @@ export default function LandingPage() {
           {/* Leaderboard Sliding Panel */}
 
           <div
-            className={`font-[GilM] fixed top-0 left-0 h-full w-[40vh] lg:w-[35vw] bg-white/20  z-50 transform transition-transform duration-500 ${
+            className={`font-[GilM] fixed top-0 left-0 h-full w-[40vh] lg:w-[40vw] bg-white/20  z-50 transform transition-transform duration-500 ${
               showLeaderboard ? "translate-x-0" : "-translate-x-full"
             }`}
           >
@@ -330,7 +330,7 @@ export default function LandingPage() {
 
             {/* Leaderboard Content */}
             <div className="px-[2vw] space-y-[1vh] lg:space-y-[1vw] overflow-y-auto h-full">
-              <ul className="lg:space-y-[.7vw] space-y-[1vh] max-h-[75vh] overflow-y-auto pb-[10vw]">
+              <ul className="lg:space-y-[.7vw] space-y-[1vh]  max-h-[75vh] overflow-y-auto pb-[10vw]">
                 {leaderboard.length === 0 ? (
                   <li className="text-[3vh] lg:text-[1.5vw] text-white text-center py-[2vw]">
                     {isLeaderboardLoading ? "Loading..." : "No entries yet"}

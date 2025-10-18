@@ -646,8 +646,10 @@ const Round = () => {
               autoPlay
               muted
               loop
+              preload="metadata"
+              poster="https://res.cloudinary.com/dke15c3sv/image/upload/v1760795245/Screenshot_2025-10-18_190026_hvl9mt.png"
               className="h-screen w-full object-cover z-10 inset-0"
-              src="https://res.cloudinary.com/dke15c3sv/video/upload/v1760723119/landing_wxbihl.mp4"
+              src="https://res.cloudinary.com/dke15c3sv/video/upload/v1760795224/Recording_2025-10-18_191130_amnqj3.mp4"
             ></video>
             {/* Overlay content */}
             <div className="absolute inset-0 flex top-[10%] flex-col items-center justify-center text-center text-white animate-fade-in z-50">

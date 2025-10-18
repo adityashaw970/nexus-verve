@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import io from "socket.io-client";
 
 // Initialize socket connection
-const socket = io("http://localhost:5000", {
+const socket = io("https://nexus-verve.onrender.com", {
   withCredentials: true,
 });
 
@@ -28,10 +28,13 @@ const Round = () => {
   useEffect(() => {
     const checkLoggedIn = async () => {
       try {
-        const res = await fetch("http://localhost:5000/auth/status", {
-          method: "GET",
-          credentials: "include",
-        });
+        const res = await fetch(
+          "https://nexus-verve.onrender.com/auth/status",
+          {
+            method: "GET",
+            credentials: "include",
+          }
+        );
 
         const msg = await res.json();
         if (!msg.loggedIn || res.status === 404 || !msg.user?.email) {
@@ -63,7 +66,7 @@ const Round = () => {
   const fetchCurrentRoundData = async (round) => {
     try {
       const response = await fetch(
-        `http://localhost:5000/get-user-score?round=${round}`,
+        `https://nexus-verve.onrender.com/get-user-score?round=${round}`,
         {
           method: "GET",
           credentials: "include",
@@ -91,7 +94,7 @@ const Round = () => {
 
       // Also fetch total score across all rounds
       const totalResponse = await fetch(
-        "http://localhost:5000/get-user-score",
+        "https://nexus-verve.onrender.com/get-user-score",
         {
           method: "GET",
           credentials: "include",
@@ -288,7 +291,7 @@ const Round = () => {
     setIsLoading(true);
     try {
       const currentAnswer = userAnswers[currentIndex] || "";
-      const res = await fetch("http://localhost:5000/auth/status", {
+      const res = await fetch("https://nexus-verve.onrender.com/auth/status", {
         credentials: "include",
       });
       const data = await res.json();
@@ -360,9 +363,12 @@ const Round = () => {
       const currentAnswer = userAnswers[currentIndex] || "";
 
       try {
-        const res = await fetch("http://localhost:5000/auth/status", {
-          credentials: "include",
-        });
+        const res = await fetch(
+          "https://nexus-verve.onrender.com/auth/status",
+          {
+            credentials: "include",
+          }
+        );
         const data = await res.json();
 
         if (data.loggedIn && currentAnswer.trim()) {

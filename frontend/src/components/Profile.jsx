@@ -6,7 +6,7 @@ const Profile = () => {
 
   useEffect(() => {
     const checkLoggedIn = async () => {
-      const res = await fetch("http://localhost:5000/auth/status", {
+      const res = await fetch("https://nexus-verve.onrender.com/auth/status", {
         method: "GET",
         credentials: "include", // important for sending cookies
       });
@@ -27,7 +27,7 @@ const Profile = () => {
 
   const handleLogout = async () => {
     try {
-      const res = await fetch("http://localhost:5000/logout", {
+      const res = await fetch("https://nexus-verve.onrender.com/logout", {
         method: "GET",
         credentials: "include", // needed to send cookies
       });

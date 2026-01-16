@@ -26,7 +26,7 @@ const Preloader = ({ onLoadComplete }) => {
       </video>
       <div className="preloader-text-box">
         <h1 className="text-[14vw] sm:text-[10vw] md:text-[8vw] lg:text-[8vw] font-bold uppercase tracking-tight 
-          font-['Game_of_Squids'] text-gray-200 animate-glowPulse">NEXUS VERSE</h1>
+          font-['Game_of_Squids'] text-gray-200 animate-glowPulse">COGNIVERSE</h1>
        
       </div>
     </div>

@@ -32,7 +32,7 @@ const QUIZ_CONFIG = {
     name: "Round 1",
     scoreMultiplier: 1,
     questionTime: 30000, // 30 seconds
-    startTime: "40 11 * * *",
+    startTime: "00 00 * * *",
     questions: [
       // ===== Round 1 - Set 1 =====
       {

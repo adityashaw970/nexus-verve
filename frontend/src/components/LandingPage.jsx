@@ -173,7 +173,7 @@ export default function LandingPage() {
             className="text-[20vw] sm:text-[14vw] md:text-[5vw] lg:text-[7vw] font-bold uppercase lg:tracking-tight leading-[18vw]
           font-['Game_of_Squids'] text-gray-200 animate-glowPulse"
           >
-            Nexus Verse
+            CogniVerse
           </h1>
         </div>
 

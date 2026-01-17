@@ -8,14 +8,14 @@ const os = require("os");
 const WORKERS = Math.min(2, os.cpus().length);
 
 if (cluster.isPrimary) {
-  console.log(`Primary ${process.pid} running`);
+  // console.log(`Primary ${process.pid} running`);
 
   for (let i = 0; i < WORKERS; i++) {
     cluster.fork();
   }
 
   cluster.on("exit", (worker) => {
-    console.log(`Worker ${worker.process.pid} died, restarting...`);
+    // console.log(`Worker ${worker.process.pid} died, restarting...`);
     cluster.fork();
   });
 
@@ -580,7 +580,7 @@ mongoose.connect(process.env.MONGODB_URI, {
   maxIdleTimeMS: 30000,
   compressors: ['zlib'],
 }).then(async () => {
-  // console.log(`✅ MongoDB Connected - Worker ${process.pid}`);
+  console.log(`✅ MongoDB Connected - Worker ${process.pid}`);
   
   // Load configs into cache
   const configs = await RoundConfig.find().lean();
@@ -619,7 +619,7 @@ async function scheduleQuizzes() {
 // ================= GRACEFUL SHUTDOWN =================
 
 process.on("SIGTERM", async () => {
-  console.log(`Worker ${process.pid} shutting down...`);
+  // console.log(`Worker ${process.pid} shutting down...`);
   
   if (questionTimer) clearTimeout(questionTimer);
   scheduledJobs.forEach(job => job.stop());

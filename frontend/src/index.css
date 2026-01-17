@@ -38,17 +38,7 @@ body {
   @apply select-none;
 }
 
-/*prasanna*/
-/* @keyframes glowPulse {
-  0%, 100% {
-    filter: drop-shadow(0 0 4px rgba(220, 220, 220, 0.4))
-            drop-shadow(0 0 10px rgba(200, 200, 200, 0.2));
-  }
-  50% {
-    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.6))
-            drop-shadow(0 0 14px rgba(230, 230, 230, 0.4));
-  }
-} */
+
 @keyframes glowPulse {
   0%, 100% {
     filter: drop-shadow(0 0 4px rgba(226, 13, 165, 0.4))

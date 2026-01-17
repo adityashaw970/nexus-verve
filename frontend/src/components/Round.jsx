@@ -37,6 +37,315 @@ const Round = () => {
   const [connectionError, setConnectionError] = useState(null);
 
   const questionTimerRef = useRef(null);
+  const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const MAX_TAB_SWITCHES = 5;
+  const FALLBACK_QUESTIONS = {
+    1: {
+      1: [
+        {
+          order: 0,
+          question:
+            "What is the Japanese term for animation, often characterized by colorful artwork, fantastical themes, and vibrant characters?",
+        },
+        {
+          order: 1,
+          question:
+            "In which popular Nintendo franchise do players battle in various arenas using characters like Mario, Link, and Pikachu?",
+        },
+        {
+          order: 2,
+          question:
+            "What is the name of the iconic Japanese media franchise created by Satoshi Tajiri in 1996, featuring special creatures that can be tamed and trained?",
+        },
+        {
+          order: 3,
+          question:
+            "This device used in the Pokémon series is an electronic encyclopedia of all types of Pokémon, vital for new trainers.",
+        },
+        {
+          order: 4,
+          question:
+            "Who is the iconic protagonist of the Pokémon anime series, known for his dream of becoming a Pokémon Master and his bond with his partner Pikachu?",
+        },
+      ],
+      2: [
+        {
+          order: 5,
+          question:
+            "What is the term for a player who is primarily responsible for scoring runs and defending the wicket in the game of cricket?",
+        },
+        {
+          order: 6,
+          question:
+            "What is the prestigious annual cricket event, where the best players from various franchises compete, and has become immensely popular in India since its inception in 2008?",
+        },
+        {
+          order: 7,
+          question:
+            "Which Indian city, known for its vibrant culture and as a major IT hub, is home to a top IPL team and has a significant cricket following?",
+        },
+        {
+          order: 8,
+          question:
+            "This person got married to a famous celebrity in December of 2017. Which famous celebrity did he get married to from the world of Bollywood?",
+        },
+        {
+          order: 9,
+          question:
+            "Who is this prolific Indian cricketer, renowned for his batting prowess, passionate playing style, and arguably the best test captain India has ever produced?",
+        },
+      ],
+      3: [
+        {
+          order: 10,
+          question:
+            "It is a majestic marble building built between 1906 and 1921. It was dedicated to the memory of the Empress of England of that time. It is also a symbol of love and culture.",
+        },
+        {
+          order: 11,
+          question:
+            "It is an iconic cantilever bridge connecting two cities. It is also named to honor the famous Bengali poet. It is one of the busiest bridges in the world standing on two main pillars.",
+        },
+        {
+          order: 12,
+          question:
+            "The oldest and the largest museum in India and Asia, housing an extensive collection of art, archeology and natural history exhibits. It was founded in 1814 at the cradle of the Asiatic Society of Bengal.",
+        },
+        {
+          order: 13,
+          question:
+            "A vibrant street known for its restaurants, cafes, and nightlife offering a mix of colonial-era buildings and modern establishments. In some specific festive seasons it transforms into a dazzling spectacle with vibrant decorations.",
+        },
+        {
+          order: 14,
+          question: "Which city was the capital of British India before Delhi?",
+        },
+      ],
+    },
+
+    2: {
+      1: [
+        {
+          order: 0,
+          question:
+            "In the UK, the book is known as 'Harry Potter and the Philosopher's Stone.' What was the U.S. title?",
+        },
+        {
+          order: 1,
+          question:
+            "J.K. Rowling conceived the idea for a famous character while on a delayed train in 1990. Who was that character?",
+        },
+        {
+          order: 2,
+          question:
+            "The original UK cover art was illustrated by a 23-year-old English artist. Who was he?",
+        },
+        {
+          order: 3,
+          question:
+            "Which real historical figure, known for alchemy, appears as a character in the book?",
+        },
+        {
+          order: 4,
+          question:
+            "This book sold over 120 million copies worldwide — what is its title?",
+        },
+      ],
+      2: [
+        {
+          order: 5,
+          question:
+            "What is the term for a genre of ancient Indian texts that contain myths, legends, and historical narratives?",
+        },
+        {
+          order: 6,
+          question:
+            "A thief who became a sage through chanting god's name — who is he?",
+        },
+        {
+          order: 7,
+          question:
+            "Who is the greatest devotee of Lord Shiva known for intelligence and cunning?",
+        },
+        {
+          order: 8,
+          question:
+            "What is the tear-shaped island nation located south of India?",
+        },
+        {
+          order: 9,
+          question:
+            "Which epic tells the story of Lord Rama and teaches duty and devotion?",
+        },
+      ],
+      3: [
+        {
+          order: 10,
+          question:
+            "They work with fabrics and garments using sewing machines. Who are they?",
+        },
+        {
+          order: 11,
+          question:
+            "This car was first introduced in India in 2005 and became a bestseller. Name it.",
+        },
+        {
+          order: 12,
+          question:
+            "This area often refers to intergalactic or interstellar emptiness. What is it called?",
+        },
+        {
+          order: 13,
+          question:
+            "The country bordered by Canada and Mexico, consisting of 50 states and Washington, D.C.?",
+        },
+        {
+          order: 14,
+          question:
+            "American singer-songwriter born in 1989, known for country and pop hits. Who is she?",
+        },
+      ],
+    },
+
+    3: {
+      1: [
+        {
+          order: 0,
+          question: "Which country is known as 'The Land of the Rising Sun'?",
+        },
+        {
+          order: 1,
+          question:
+            "An American singer, songwriter, dancer, and cultural icon who debuted at age six in 1964. Who is he?",
+        },
+        {
+          order: 2,
+          question:
+            "A large fortified building serving as a royal residence in medieval times. What is it?",
+        },
+        {
+          order: 3,
+          question:
+            "A supernatural malevolent being believed to influence humans — what is it called?",
+        },
+        {
+          order: 4,
+          question:
+            "A warrior group from an anime hunting demons to avenge their family — name the anime.",
+        },
+      ],
+      2: [
+        {
+          order: 5,
+          question:
+            "What is the common nickname for a device used to lift heavy objects, especially vehicles?",
+        },
+        {
+          order: 6,
+          question:
+            "What is the term for a large watercraft designed to transport people or goods?",
+        },
+        {
+          order: 7,
+          question:
+            "What term describes a state of armed conflict between countries or groups?",
+        },
+        {
+          order: 8,
+          question:
+            "What small, common bird known for chirping belongs to the family Passeridae?",
+        },
+        {
+          order: 9,
+          question:
+            "Who is the witty pirate known for saying 'Why is the rum always gone?'",
+        },
+      ],
+      3: [
+        {
+          order: 10,
+          question:
+            "An affectionate term for a rabbit, especially a young or cute one.",
+        },
+        {
+          order: 11,
+          question:
+            "The fibrous material that makes up tree trunks and branches.",
+        },
+        {
+          order: 12,
+          question: "The reproductive structure of flowering plants.",
+        },
+        {
+          order: 13,
+          question:
+            "A central character in the Mahabharata known for his archery skills and bravery.",
+        },
+        {
+          order: 14,
+          question:
+            "Which 2021 Telugu action-drama film revolves around red sandalwood smuggling?",
+        },
+      ],
+    },
+
+    4: {
+      1: [
+        {
+          order: 0,
+          question:
+            "I can recognize faces in your phone's photo, and tell who is who wherever you go.",
+        },
+        {
+          order: 1,
+          question:
+            "I can translate words from one language to another, helping people understand one another.",
+        },
+        {
+          order: 2,
+          question:
+            "I learn from data and get smarter each day, predicting things in a clever way.",
+        },
+        {
+          order: 3,
+          question:
+            "I can chat, answer questions, or tell you a joke — sometimes my answers make humans go 'whoa!'",
+        },
+        {
+          order: 4,
+          question:
+            "I am the technology behind all these things, learning, predicting, and making life zing. What am I?",
+        },
+      ],
+      2: [
+        {
+          order: 5,
+          question:
+            "I am a delicious dish with cheese and tomato, everyone loves me, even the bravest bravado.",
+        },
+        {
+          order: 6,
+          question:
+            "I am a famous tower that leans to one side, tourists take photos here with pride.",
+        },
+        {
+          order: 7,
+          question:
+            "I am a city of canals and gondolas too, a romantic place where you can float through.",
+        },
+        {
+          order: 8,
+          question:
+            "I am a city with the Colosseum tall, gladiators once fought within my walls.",
+        },
+        {
+          order: 9,
+          question:
+            "I'm the country of pizza, towers, and art, with canals and ruins that capture the heart. Which country am I?",
+        },
+      ],
+    },
+  };
 
   // ========== HEARTBEAT MECHANISM ==========
   useEffect(() => {
@@ -143,10 +452,6 @@ const Round = () => {
 
           const remaining = Math.max(0, timeForQuestion - elapsed);
 
-          console.log("✅ Restoring from URL params:");
-          console.log(`- Question Index: ${questionData.index}`);
-          console.log(`- Elapsed: ${elapsed}s, Remaining: ${remaining}s`);
-
           // Restore all state
           setCurrentQuestion(questionData);
           setCurrentIndex(questionData.index);
@@ -240,6 +545,12 @@ const Round = () => {
     socket.on("question", (questionData) => {
       console.log("📩 Received question:", questionData);
 
+      // Use server-provided startTime if available, otherwise use current time
+      const startTime = questionData.startTime || Date.now();
+      const duration =
+        questionData.duration ||
+        (questionData.round === 1 ? 30 : questionData.round === 2 ? 40 : 60);
+
       // ✅ Clear old URL params first
       const url = new URL(window.location);
       url.searchParams.delete("qIndex");
@@ -322,7 +633,7 @@ const Round = () => {
 
   // ========== COUNTDOWN TIMER USING URL PARAMS ==========
   useEffect(() => {
-    if (!isQuizActive || !currentQuestion || hasQuitted || isSubmitted) {
+    if (!isQuizActive || !currentQuestion || hasQuitted) {
       if (questionTimerRef.current) {
         clearInterval(questionTimerRef.current);
       }
@@ -361,7 +672,7 @@ const Round = () => {
         clearInterval(questionTimerRef.current);
       }
     };
-  }, [currentQuestion, isQuizActive, hasQuitted, questionTime, isSubmitted]);
+  }, [currentQuestion, isQuizActive, hasQuitted, questionTime]);
 
   const handleQuizComplete = useCallback(() => {
     // Clear URL params on quiz end
@@ -552,6 +863,69 @@ const Round = () => {
 
   const { setNumber, questionInSet } = getCurrentSet();
 
+  // ========== TAB SWITCH DETECTION ==========
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && isQuizActive && currentQuestion && !isSubmitted) {
+        // User switched away from tab during active quiz
+        const newCount = tabSwitchCount + 1;
+        setTabSwitchCount(newCount);
+
+        console.warn(
+          `⚠️ Tab switch detected! Count: ${newCount}/${MAX_TAB_SWITCHES}`,
+        );
+
+        if (newCount >= MAX_TAB_SWITCHES) {
+          // Auto-submit current answer and redirect
+          alert(
+            `You have switched tabs ${MAX_TAB_SWITCHES} times. Quiz terminated.`,
+          );
+
+          // Submit current answer if exists
+          const currentAnswer = userAnswers[currentIndex] || "";
+          if (currentAnswer.trim()) {
+            fetch(`${API_URL}/auth/status`, { credentials: "include" })
+              .then((res) => res.json())
+              .then((data) => {
+                if (data.loggedIn) {
+                  socket.emit("answer", {
+                    answer: [currentAnswer.trim()],
+                    userId: data.user.id,
+                    questionIndex: currentQuestion?.index || currentIndex,
+                  });
+                }
+              })
+              .catch((err) => console.error(err));
+          }
+
+          // Redirect to score page
+          setTimeout(() => {
+            window.location.href = `/score?round=${currentRound}&reason=tab-switch`;
+          }, 1000);
+        } else {
+          // Warning for remaining switches
+          alert(
+            `Warning: Tab switching detected! ${MAX_TAB_SWITCHES - newCount} switches remaining before termination.`,
+          );
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [
+    isQuizActive,
+    currentQuestion,
+    isSubmitted,
+    tabSwitchCount,
+    userAnswers,
+    currentIndex,
+    currentRound,
+  ]);
+
   return (
     <div className="font-[GilM] flex flex-col items-center justify-center min-h-screen bg-black text-white overflow-hidden relative">
       {/* CONNECTION STATUS INDICATOR */}
@@ -645,13 +1019,19 @@ const Round = () => {
               </div>
 
               {/* Progress Bar Timer */}
-              <div className="w-full lg:max-w-4xl ">
+              <div className="w-full lg:max-w-4xl">
                 <div className="flex justify-between items-center">
-                  <span className="text-white font-bold text-xl px-[1vh]">
-                    Time Remaining
+                  <span className="text-white font-bold text-xl px-[1vh] ">
+                    {isSubmitted ? "Time Elapsed" : "Time Remaining"}
                   </span>
                   <span
-                    className={`text-white font-mono text-2xl px-4 py-2 rounded-xl ${timeLeft <= 10 ? "animate-pulse text-red-400" : ""}`}
+                    className={`font-mono text-2xl px-4 py-2 rounded-xl ${
+                      timeLeft <= 10 && !isSubmitted
+                        ? "animate-pulse text-red-400"
+                        : isSubmitted
+                          ? "text-white"
+                          : "text-green-400"
+                    }`}
                   >
                     {timeLeft}s
                   </span>
@@ -667,7 +1047,9 @@ const Round = () => {
                       : `💡 Clue ${questionInSet}`}
                   </h2>
                   <p className="text-white text-center text-2xl leading-relaxed font-medium">
-                    {currentQuestion.question}
+                    {FALLBACK_QUESTIONS[currentRound][setNumber][
+                      questionInSet - 1
+                    ].question || currentQuestion.question}
                   </p>
                 </div>
               </div>
@@ -705,7 +1087,7 @@ const Round = () => {
                     <span>Submitting...</span>
                   </div>
                 ) : isSubmitted ? (
-                  "Submitted ✓"
+                  "✓ Submitted "
                 ) : (
                   "Submit Answer"
                 )}

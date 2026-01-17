@@ -183,10 +183,12 @@ export default function LandingPage() {
               </h1>
               <video
                 className="object-cover object-[50%_0%] w-full h-full"
-                src="https://res.cloudinary.com/dke15c3sv/video/upload/v1760723100/trophy_pkjqvp.mp4"
+                src="https://res.cloudinary.com/dke15c3sv/video/upload/v1768682287/Untitled_design_1_cqjvgt.mp4"
                 autoPlay
                 muted
                 loop
+                preload="metadata"
+                poster="https://res.cloudinary.com/dke15c3sv/image/upload/v1768682361/053cb79e-a87b-4e5a-9fd0-b7dbd2d7bd57_xdiocv.jpg"
               />
               {isLeaderboardLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-opacity-50">
@@ -306,12 +308,12 @@ export default function LandingPage() {
             <div className="w-full flex flex-col items-center text-white my-[5vh] lg:my-[2vw]">
               <div className="lg:rounded-[4vw] rounded-full overflow-hidden lg:h-[10vw] h-[20vh] w-[20vh] lg:w-[10vw] cursor-pointer relative">
                 <video
-                  src="https://res.cloudinary.com/dke15c3sv/video/upload/v1760723100/trophy_pkjqvp.mp4"
+                  src="https://res.cloudinary.com/dke15c3sv/video/upload/v1768682287/Untitled_design_1_cqjvgt.mp4"
                   autoPlay
                   loop
                   muted
                   preload="metadata"
-                  poster=""
+                  poster="https://res.cloudinary.com/dke15c3sv/image/upload/v1768682361/053cb79e-a87b-4e5a-9fd0-b7dbd2d7bd57_xdiocv.jpg"
                   className="lg:h-[10vw] lg:w-[10vw] object-cover h-[20vh] w-[20vh]"
                 ></video>
               </div>

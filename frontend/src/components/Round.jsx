@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import io from "socket.io-client";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://nexus-verve.onrender.com";
 
 // Initialize socket connection - OPTIMIZED FOR 500+ USERS
 const socket = io(API_URL, {
@@ -76,118 +76,130 @@ const Round = () => {
     };
   }, []);
 
-// ========== AUTHENTICATION & RESTORE FROM URL ==========
-useEffect(() => {
-  const checkLoggedIn = async () => {
-    try {
-      const res = await fetch(`${API_URL}/auth/status`, {
-        method: "GET",
-        credentials: "include",
-      });
+  // ========== AUTHENTICATION & RESTORE FROM URL ==========
+  useEffect(() => {
+    const checkLoggedIn = async () => {
+      try {
+        const res = await fetch(`${API_URL}/auth/status`, {
+          method: "GET",
+          credentials: "include",
+        });
 
-      const msg = await res.json();
-      if (!msg.loggedIn || res.status === 404 || !msg.user?.email) {
-        window.location.href = "/login";
-        return;
-      }
+        const msg = await res.json();
+        if (!msg.loggedIn || res.status === 404 || !msg.user?.email) {
+          window.location.href = "/login";
+          return;
+        }
 
-      // Determine which round based on URL
-      const urlPath = window.location.pathname;
-      let round = 1;
-      if (urlPath.includes("round2")) round = 2;
-      else if (urlPath.includes("round3")) round = 3;
-      else if (urlPath.includes("round4")) round = 4;
+        // Determine which round based on URL
+        const urlPath = window.location.pathname;
+        let round = 1;
+        if (urlPath.includes("round2")) round = 2;
+        else if (urlPath.includes("round3")) round = 3;
+        else if (urlPath.includes("round4")) round = 4;
 
-      setCurrentRound(round);
+        setCurrentRound(round);
 
-      // ✅ RESTORE QUESTION FROM URL PARAMS (if exists)
-      const urlParams = new URLSearchParams(window.location.search);
-      const qIndex = urlParams.get('qIndex');
-      const qRound = urlParams.get('qRound');
-      const qTime = urlParams.get('qTime');
-      const qTotal = urlParams.get('qTotal');
-      const qName = urlParams.get('qName');
-      const qMult = urlParams.get('qMult');
-      const qText = urlParams.get('qText');
+        // ✅ RESTORE QUESTION FROM URL PARAMS (if exists)
+        const urlParams = new URLSearchParams(window.location.search);
+        const qIndex = urlParams.get("qIndex");
+        const qRound = urlParams.get("qRound");
+        const qTime = urlParams.get("qTime");
+        const qTotal = urlParams.get("qTotal");
+        const qName = urlParams.get("qName");
+        const qMult = urlParams.get("qMult");
+        const qText = urlParams.get("qText");
 
-      if (qIndex !== null && qRound !== null && qTime !== null && qText !== null) {
-        // We have a saved question in URL
-        const questionData = {
-          index: parseInt(qIndex),
-          round: parseInt(qRound),
-          totalQuestions: parseInt(qTotal || 0),
-          roundName: qName || `Round ${qRound}`,
-          scoreMultiplier: parseInt(qMult || 1),
-          question: decodeURIComponent(qText)
-        };
+        if (
+          qIndex !== null &&
+          qRound !== null &&
+          qTime !== null &&
+          qText !== null
+        ) {
+          // We have a saved question in URL
+          const questionData = {
+            index: parseInt(qIndex),
+            round: parseInt(qRound),
+            totalQuestions: parseInt(qTotal || 0),
+            roundName: qName || `Round ${qRound}`,
+            scoreMultiplier: parseInt(qMult || 1),
+            question: decodeURIComponent(qText),
+          };
 
-        const startTime = parseInt(qTime);
-        const elapsed = Math.floor((Date.now() - startTime) / 1000);
-        
-        // Determine question time
-        const timeForQuestion =
-          questionData.round === 1 ? 30 :
-          questionData.round === 2 ? 40 :
-          questionData.round === 3 ? 60 :
-          questionData.round === 4 ? 60 : 60;
-        
-        const remaining = Math.max(0, timeForQuestion - elapsed);
+          const startTime = parseInt(qTime);
+          const elapsed = Math.floor((Date.now() - startTime) / 1000);
 
-        console.log("✅ Restoring from URL params:");
-        console.log(`- Question Index: ${questionData.index}`);
-        console.log(`- Elapsed: ${elapsed}s, Remaining: ${remaining}s`);
+          // Determine question time
+          const timeForQuestion =
+            questionData.round === 1
+              ? 30
+              : questionData.round === 2
+                ? 40
+                : questionData.round === 3
+                  ? 60
+                  : questionData.round === 4
+                    ? 60
+                    : 60;
 
-        // Restore all state
-        setCurrentQuestion(questionData);
-        setCurrentIndex(questionData.index);
-        setCurrentRound(questionData.round);
-        setRoundName(questionData.roundName);
-        setScoreMultiplier(questionData.scoreMultiplier);
-        setTotalQuestions(questionData.totalQuestions);
-        setQuestionTime(timeForQuestion);
-        setTimeLeft(remaining);
-        setIsQuizActive(true);
+          const remaining = Math.max(0, timeForQuestion - elapsed);
 
-        // ✅ Restore user answers for this round
-        let restoredAnswers = {}; // Declare outside try-catch for debug logging
-        const savedAnswers = localStorage.getItem(`temp_answers_${questionData.round}`);
-        if (savedAnswers) {
-          try {
-            restoredAnswers = JSON.parse(savedAnswers);
-            setUserAnswers(restoredAnswers);
-            console.log("✅ Restored user answers:", restoredAnswers);
-          } catch (e) {
-            console.error("Failed to restore answers:", e);
+          console.log("✅ Restoring from URL params:");
+          console.log(`- Question Index: ${questionData.index}`);
+          console.log(`- Elapsed: ${elapsed}s, Remaining: ${remaining}s`);
+
+          // Restore all state
+          setCurrentQuestion(questionData);
+          setCurrentIndex(questionData.index);
+          setCurrentRound(questionData.round);
+          setRoundName(questionData.roundName);
+          setScoreMultiplier(questionData.scoreMultiplier);
+          setTotalQuestions(questionData.totalQuestions);
+          setQuestionTime(timeForQuestion);
+          setTimeLeft(remaining);
+          setIsQuizActive(true);
+
+          // ✅ Restore user answers for this round
+          let restoredAnswers = {}; // Declare outside try-catch for debug logging
+          const savedAnswers = localStorage.getItem(
+            `temp_answers_${questionData.round}`,
+          );
+          if (savedAnswers) {
+            try {
+              restoredAnswers = JSON.parse(savedAnswers);
+              setUserAnswers(restoredAnswers);
+              console.log("✅ Restored user answers:", restoredAnswers);
+            } catch (e) {
+              console.error("Failed to restore answers:", e);
+            }
           }
+
+          // If time is up, auto-submit
+          if (remaining <= 0) {
+            setIsSubmitted(true);
+          }
+
+          // ✅ Debug logging
+          console.log("🔍 Restoration Debug:");
+          console.log("- Current Question:", questionData);
+          console.log("- Time Left:", remaining);
+          console.log("- Question Time:", timeForQuestion);
+          console.log("- User Answers:", restoredAnswers);
+        } else {
+          // No saved question, request current state from server
+          console.log("⚠️ No URL params found, requesting from server");
+          socket.emit("get-initial");
         }
 
-        // If time is up, auto-submit
-        if (remaining <= 0) {
-          setIsSubmitted(true);
-        }
-
-        // ✅ Debug logging
-        console.log("🔍 Restoration Debug:");
-        console.log("- Current Question:", questionData);
-        console.log("- Time Left:", remaining);
-        console.log("- Question Time:", timeForQuestion);
-        console.log("- User Answers:", restoredAnswers);
-      } else {
-        // No saved question, request current state from server
-        console.log("⚠️ No URL params found, requesting from server");
-        socket.emit("get-initial");
+        // Fetch round-specific user data from backend
+        await fetchCurrentRoundData(round);
+      } catch (error) {
+        console.error("Auth check failed:", error);
+        window.location.href = "/login";
       }
+    };
 
-      // Fetch round-specific user data from backend
-      await fetchCurrentRoundData(round);
-    } catch (error) {
-      console.error("Auth check failed:", error);
-      window.location.href = "/login";
-    }
-  };
-
-  checkLoggedIn();
-}, []); // Run once on mount
+    checkLoggedIn();
+  }, []); // Run once on mount
   // ========== FETCH ROUND DATA FROM BACKEND (NO LOCALSTORAGE FALLBACK) ==========
   const fetchCurrentRoundData = async (round) => {
     try {
@@ -223,216 +235,222 @@ useEffect(() => {
     }
   };
 
- // ========== SOCKET EVENT LISTENERS ==========
-useEffect(() => {
-  socket.on("question", (questionData) => {
-    console.log("📩 Received question:", questionData);
+  // ========== SOCKET EVENT LISTENERS ==========
+  useEffect(() => {
+    socket.on("question", (questionData) => {
+      console.log("📩 Received question:", questionData);
 
-    // ✅ Clear old URL params first
-    const url = new URL(window.location);
-    url.searchParams.delete('qIndex');
-    url.searchParams.delete('qRound');
-    url.searchParams.delete('qTime');
-    url.searchParams.delete('qTotal');
-    url.searchParams.delete('qName');
-    url.searchParams.delete('qMult');
-    url.searchParams.delete('qText');
-    
-    // ✅ Now set new URL params
-    url.searchParams.set('qIndex', questionData.index || 0);
-    url.searchParams.set('qRound', questionData.round);
-    url.searchParams.set('qTime', Date.now().toString());
-    url.searchParams.set('qTotal', questionData.totalQuestions || 0);
-    url.searchParams.set('qName', questionData.roundName || '');
-    url.searchParams.set('qMult', questionData.scoreMultiplier || 1);
-    url.searchParams.set('qText', encodeURIComponent(questionData.question));
-    window.history.replaceState({}, '', url);
+      // ✅ Clear old URL params first
+      const url = new URL(window.location);
+      url.searchParams.delete("qIndex");
+      url.searchParams.delete("qRound");
+      url.searchParams.delete("qTime");
+      url.searchParams.delete("qTotal");
+      url.searchParams.delete("qName");
+      url.searchParams.delete("qMult");
+      url.searchParams.delete("qText");
 
-    // Update question data
-    setCurrentQuestion(questionData);
-    setCurrentIndex(questionData.index || 0);
-    setCurrentRound(questionData.round || currentRound);
-    setRoundName(
-      questionData.roundName || `Round ${questionData.round || currentRound}`
-    );
-    setScoreMultiplier(questionData.scoreMultiplier || 1);
-    setTotalQuestions(questionData.totalQuestions || 0);
+      // ✅ Now set new URL params
+      url.searchParams.set("qIndex", questionData.index || 0);
+      url.searchParams.set("qRound", questionData.round);
+      url.searchParams.set("qTime", Date.now().toString());
+      url.searchParams.set("qTotal", questionData.totalQuestions || 0);
+      url.searchParams.set("qName", questionData.roundName || "");
+      url.searchParams.set("qMult", questionData.scoreMultiplier || 1);
+      url.searchParams.set("qText", encodeURIComponent(questionData.question));
+      window.history.replaceState({}, "", url);
 
-    // Set question time based on round configuration
-    const timeForQuestion =
-      questionData.round === 1 ? 30 :
-      questionData.round === 2 ? 40 :
-      questionData.round === 3 ? 60 :
-      questionData.round === 4 ? 60 : 60;
-    
-    setQuestionTime(timeForQuestion);
-    setTimeLeft(timeForQuestion);
+      // Update question data
+      setCurrentQuestion(questionData);
+      setCurrentIndex(questionData.index || 0);
+      setCurrentRound(questionData.round || currentRound);
+      setRoundName(
+        questionData.roundName || `Round ${questionData.round || currentRound}`,
+      );
+      setScoreMultiplier(questionData.scoreMultiplier || 1);
+      setTotalQuestions(questionData.totalQuestions || 0);
 
-    setIsSubmitted(false);
-    setHasQuitted(false);
-    setQuestionAttempt((prev) => prev + 1);
-  });
+      // Set question time based on round configuration
+      const timeForQuestion =
+        questionData.round === 1
+          ? 30
+          : questionData.round === 2
+            ? 40
+            : questionData.round === 3
+              ? 60
+              : questionData.round === 4
+                ? 60
+                : 60;
 
-  // Listen for quiz end
-  socket.on("quiz-end", (data) => {
-    console.log("🏁 Quiz ended:", data);
-    setIsSubmitted(true);
-    setIsQuizActive(false);
-    handleQuizComplete();
-  });
+      setQuestionTime(timeForQuestion);
+      setTimeLeft(timeForQuestion);
 
-  // Listen for score updates
-  socket.on("score-update", (scoreData) => {
-    console.log("🎯 Score update:", scoreData);
-    setRoundScore(scoreData.roundScore || 0);
-    setTotalScore(scoreData.totalScore || 0);
-    setQuestionAttempt(scoreData.roundAttempted || 0);
-  });
+      setIsSubmitted(false);
+      setHasQuitted(false);
+      setQuestionAttempt((prev) => prev + 1);
+    });
 
-  socket.on("error", (errorData) => {
-    console.error("Server error:", errorData);
-    alert(errorData.message || "An error occurred");
-  });
+    // Listen for quiz end
+    socket.on("quiz-end", (data) => {
+      console.log("🏁 Quiz ended:", data);
+      setIsSubmitted(true);
+      setIsQuizActive(false);
+      handleQuizComplete();
+    });
 
-  // Cleanup socket listeners
-  return () => {
-    socket.off("question");
-    socket.off("quiz-end");
-    socket.off("score-update");
-    socket.off("error");
-  };
-}, [currentRound]);
+    // Listen for score updates
+    socket.on("score-update", (scoreData) => {
+      console.log("🎯 Score update:", scoreData);
+      setRoundScore(scoreData.roundScore || 0);
+      setTotalScore(scoreData.totalScore || 0);
+      setQuestionAttempt(scoreData.roundAttempted || 0);
+    });
 
-    // ========== COUNTDOWN TIMER USING URL PARAMS ==========
-useEffect(() => {
-  if (!isQuizActive || !currentQuestion || hasQuitted || isSubmitted) {
-    if (questionTimerRef.current) {
-      clearInterval(questionTimerRef.current);
-    }
-    return;
-  }
+    socket.on("error", (errorData) => {
+      console.error("Server error:", errorData);
+      alert(errorData.message || "An error occurred");
+    });
 
-  // ✅ Get start time from URL (more reliable than sessionStorage)
-  const urlParams = new URLSearchParams(window.location.search);
-  const qTime = urlParams.get('qTime');
-  const startTime = qTime ? parseInt(qTime) : Date.now();
+    // Cleanup socket listeners
+    return () => {
+      socket.off("question");
+      socket.off("quiz-end");
+      socket.off("score-update");
+      socket.off("error");
+    };
+  }, [currentRound]);
 
-  // If no time in URL, set it now
-  if (!qTime) {
-    const url = new URL(window.location);
-    url.searchParams.set('qTime', startTime.toString());
-    window.history.replaceState({}, '', url);
-  }
-
-  questionTimerRef.current = setInterval(() => {
-    const now = Date.now();
-    const elapsed = Math.floor((now - startTime) / 1000);
-    const remaining = Math.max(0, questionTime - elapsed);
-    setTimeLeft(remaining);
-
-    // Auto-submit when time is up
-    if (remaining <= 0) {
-      clearInterval(questionTimerRef.current);
-      if (!isSubmitted) {
-        handleAutoSubmit();
+  // ========== COUNTDOWN TIMER USING URL PARAMS ==========
+  useEffect(() => {
+    if (!isQuizActive || !currentQuestion || hasQuitted || isSubmitted) {
+      if (questionTimerRef.current) {
+        clearInterval(questionTimerRef.current);
       }
+      return;
     }
-  }, 1000);
 
-  return () => {
-    if (questionTimerRef.current) {
-      clearInterval(questionTimerRef.current);
+    // ✅ Get start time from URL (more reliable than sessionStorage)
+    const urlParams = new URLSearchParams(window.location.search);
+    const qTime = urlParams.get("qTime");
+    const startTime = qTime ? parseInt(qTime) : Date.now();
+
+    // If no time in URL, set it now
+    if (!qTime) {
+      const url = new URL(window.location);
+      url.searchParams.set("qTime", startTime.toString());
+      window.history.replaceState({}, "", url);
     }
-  };
-}, [currentQuestion, isQuizActive, hasQuitted, questionTime, isSubmitted]);
 
+    questionTimerRef.current = setInterval(() => {
+      const now = Date.now();
+      const elapsed = Math.floor((now - startTime) / 1000);
+      const remaining = Math.max(0, questionTime - elapsed);
+      setTimeLeft(remaining);
+
+      // Auto-submit when time is up
+      if (remaining <= 0) {
+        clearInterval(questionTimerRef.current);
+        if (!isSubmitted) {
+          handleAutoSubmit();
+        }
+      }
+    }, 1000);
+
+    return () => {
+      if (questionTimerRef.current) {
+        clearInterval(questionTimerRef.current);
+      }
+    };
+  }, [currentQuestion, isQuizActive, hasQuitted, questionTime, isSubmitted]);
 
   const handleQuizComplete = useCallback(() => {
-  // Clear URL params on quiz end
-  const url = new URL(window.location);
-  url.searchParams.delete('qIndex');
-  url.searchParams.delete('qRound');
-  url.searchParams.delete('qTime');
-  url.searchParams.delete('qTotal');
-  url.searchParams.delete('qName');
-  url.searchParams.delete('qMult');
-  url.searchParams.delete('qText');
-  window.history.replaceState({}, '', url);
-  
-  // ✅ ADD THIS: Clear temp answers
-  localStorage.removeItem(`temp_answers_${currentRound}`);
-  
-  setTimeout(() => {
-    window.location.href = `/score?round=${currentRound}`;
-  }, 1000);
-}, [currentRound]);
+    // Clear URL params on quiz end
+    const url = new URL(window.location);
+    url.searchParams.delete("qIndex");
+    url.searchParams.delete("qRound");
+    url.searchParams.delete("qTime");
+    url.searchParams.delete("qTotal");
+    url.searchParams.delete("qName");
+    url.searchParams.delete("qMult");
+    url.searchParams.delete("qText");
+    window.history.replaceState({}, "", url);
+
+    // ✅ ADD THIS: Clear temp answers
+    localStorage.removeItem(`temp_answers_${currentRound}`);
+
+    setTimeout(() => {
+      window.location.href = `/score?round=${currentRound}`;
+    }, 1000);
+  }, [currentRound]);
   // ========== ANSWER SUBMISSION ==========
-const sendAnswer = useCallback(async () => {
-  if (!currentQuestion || isSubmitted || isLoading) return;
+  const sendAnswer = useCallback(async () => {
+    if (!currentQuestion || isSubmitted || isLoading) return;
 
-  setIsLoading(true);
-  try {
-    const currentAnswer = userAnswers[currentIndex] || "";
-    const res = await fetch(`${API_URL}/auth/status`, {
-      credentials: "include",
-    });
-    const data = await res.json();
-
-    if (data.loggedIn) {
-      // Submit answer in array format
-      socket.emit("answer", {
-        answer: [currentAnswer.trim()],
-        userId: data.user.id,
-        questionIndex:
-          currentQuestion.index !== undefined
-            ? currentQuestion.index
-            : currentIndex,
+    setIsLoading(true);
+    try {
+      const currentAnswer = userAnswers[currentIndex] || "";
+      const res = await fetch(`${API_URL}/auth/status`, {
+        credentials: "include",
       });
+      const data = await res.json();
 
-      setIsSubmitted(true);
-      console.log("✅ Answer submitted:", currentAnswer.trim());
-    } else {
-      alert("You must be logged in to submit answers");
+      if (data.loggedIn) {
+        // Submit answer in array format
+        socket.emit("answer", {
+          answer: [currentAnswer.trim()],
+          userId: data.user.id,
+          questionIndex:
+            currentQuestion.index !== undefined
+              ? currentQuestion.index
+              : currentIndex,
+        });
+
+        setIsSubmitted(true);
+        console.log("✅ Answer submitted:", currentAnswer.trim());
+      } else {
+        alert("You must be logged in to submit answers");
+      }
+    } catch (error) {
+      console.error("Failed to send answer:", error);
+      alert("Failed to submit answer. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error("Failed to send answer:", error);
-    alert("Failed to submit answer. Please try again.");
-  } finally {
-    setIsLoading(false);
-  }
-}, [currentQuestion, isSubmitted, isLoading, userAnswers, currentIndex]); 
- 
-const handleAutoSubmit = useCallback(() => {
-  if (isSubmitted || isLoading || hasQuitted) return;
-  console.log("⏰ Auto-submitting due to timeout");
-  sendAnswer();
-}, [isSubmitted, isLoading, hasQuitted, sendAnswer]); // ✅ Add sendAnswer
+  }, [currentQuestion, isSubmitted, isLoading, userAnswers, currentIndex]);
 
-// Handle manual answer submission
+  const handleAutoSubmit = useCallback(() => {
+    if (isSubmitted || isLoading || hasQuitted) return;
+    console.log("⏰ Auto-submitting due to timeout");
+    sendAnswer();
+  }, [isSubmitted, isLoading, hasQuitted, sendAnswer]); // ✅ Add sendAnswer
+
+  // Handle manual answer submission
   const handleManualSubmit = () => {
     if (isSubmitted || isLoading || hasQuitted) return;
     sendAnswer();
   };
 
-// ========== HANDLE ANSWER CHANGE ==========
-const handleAnswerChange = (e) => {
-  if (hasQuitted || isSubmitted) return;
+  // ========== HANDLE ANSWER CHANGE ==========
+  const handleAnswerChange = (e) => {
+    if (hasQuitted || isSubmitted) return;
 
-  const newAnswer = e.target.value;
-  const newAnswers = { ...userAnswers };
-  newAnswers[currentIndex] = newAnswer;
-  setUserAnswers(newAnswers);
+    const newAnswer = e.target.value;
+    const newAnswers = { ...userAnswers };
+    newAnswers[currentIndex] = newAnswer;
+    setUserAnswers(newAnswers);
 
-  // ✅ Store answers in localStorage (only for current session)
-  localStorage.setItem(`temp_answers_${currentRound}`, JSON.stringify(newAnswers));
-};
-
+    // ✅ Store answers in localStorage (only for current session)
+    localStorage.setItem(
+      `temp_answers_${currentRound}`,
+      JSON.stringify(newAnswers),
+    );
+  };
 
   // ========== HANDLE QUIT ==========
   const handleQuit = async () => {
     if (
       window.confirm(
-        "Are you sure you want to quit the quiz? Your current progress will be saved and you'll see your results."
+        "Are you sure you want to quit the quiz? Your current progress will be saved and you'll see your results.",
       )
     ) {
       const currentAnswer = userAnswers[currentIndex] || "";
@@ -536,7 +554,6 @@ const handleAnswerChange = (e) => {
 
   return (
     <div className="font-[GilM] flex flex-col items-center justify-center min-h-screen bg-black text-white overflow-hidden relative">
-      
       {/* CONNECTION STATUS INDICATOR */}
       {!isConnected && (
         <div className="fixed top-4 right-4 z-50 bg-red-500/90 backdrop-blur-md px-6 py-3 rounded-2xl border border-red-300/50 shadow-lg animate-pulse">
@@ -633,7 +650,9 @@ const handleAnswerChange = (e) => {
                   <span className="text-white font-bold text-xl px-[1vh]">
                     Time Remaining
                   </span>
-                  <span className={`text-white font-mono text-2xl px-4 py-2 rounded-xl ${timeLeft <= 10 ? 'animate-pulse text-red-400' : ''}`}>
+                  <span
+                    className={`text-white font-mono text-2xl px-4 py-2 rounded-xl ${timeLeft <= 10 ? "animate-pulse text-red-400" : ""}`}
+                  >
                     {timeLeft}s
                   </span>
                 </div>

@@ -7,27 +7,24 @@ const Score = () => {
   const [userInfo, setUserInfo] = useState(null);
   const [currentRound, setCurrentRound] = useState(1);
   const [allRoundsData, setAllRoundsData] = useState({});
-  const API_URL = "http://localhost:5000";
+  const API_URL = "https://nexus-verve.onrender.com";
 
-      const handleGoHome = () => {
-      // ✅ ADD sessionStorage clearing:
-      sessionStorage.removeItem("current_question");
-      sessionStorage.removeItem("question_start_time");
-      
-      // Keep localStorage.clear() commented out if you want
-      window.location.href = "/profile";
-    };
+  const handleGoHome = () => {
+    // ✅ ADD sessionStorage clearing:
+    sessionStorage.removeItem("current_question");
+    sessionStorage.removeItem("question_start_time");
+
+    // Keep localStorage.clear() commented out if you want
+    window.location.href = "/profile";
+  };
   useEffect(() => {
     const checkAuthAndLoadData = async () => {
       try {
         // Check if user is logged in
-        const res = await fetch(
-          `${API_URL}/auth/status`,
-          {
-            method: "GET",
-            credentials: "include",
-          }
-        );
+        const res = await fetch(`${API_URL}/auth/status`, {
+          method: "GET",
+          credentials: "include",
+        });
 
         const authData = await res.json();
 
@@ -62,13 +59,10 @@ const Score = () => {
 
   const fetchRoundData = async (round) => {
     try {
-      const response = await fetch(
-        `${API_URL}/get-user-score?round=${round}`,
-        {
-          method: "GET",
-          credentials: "include",
-        }
-      );
+      const response = await fetch(`${API_URL}/get-user-score?round=${round}`, {
+        method: "GET",
+        credentials: "include",
+      });
 
       if (response.status === 401) {
         window.location.href = "/login";
@@ -102,13 +96,10 @@ const Score = () => {
 
   const fetchTotalData = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/get-user-score`,
-        {
-          method: "GET",
-          credentials: "include",
-        }
-      );
+      const response = await fetch(`${API_URL}/get-user-score`, {
+        method: "GET",
+        credentials: "include",
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -120,12 +111,12 @@ const Score = () => {
       const savedTotalScore =
         // parseInt(localStorage.getItem("total_score")) || 0;
 
-      setTotalData({
-        totalScore: savedTotalScore,
-        totalAttempted: 0,
-        roundsCompleted: [],
-        totalRounds: 4,
-      });
+        setTotalData({
+          totalScore: savedTotalScore,
+          totalAttempted: 0,
+          roundsCompleted: [],
+          totalRounds: 4,
+        });
     }
   };
 
@@ -140,7 +131,7 @@ const Score = () => {
           {
             method: "GET",
             credentials: "include",
-          }
+          },
         );
 
         if (response.ok) {
@@ -166,7 +157,7 @@ const Score = () => {
       (sum, round) => {
         return sum + round.totalQuestions * round.scoreMultiplier;
       },
-      0
+      0,
     );
 
     if (totalPossibleScore === 0) return 0;
@@ -295,7 +286,7 @@ const Score = () => {
               <div className="bg-gray-800 rounded-2xl p-6 text-center border border-gray-600">
                 <div
                   className={`text-4xl font-bold mb-2 ${getScoreColor(
-                    roundPercentage
+                    roundPercentage,
                   )}`}
                 >
                   {roundPercentage}%
@@ -394,7 +385,7 @@ const Score = () => {
               <div className="bg-gray-800 rounded-2xl p-6 text-center border border-gray-600">
                 <div
                   className={`text-4xl font-bold mb-2 ${getScoreColor(
-                    totalPercentage
+                    totalPercentage,
                   )}`}
                 >
                   {totalPercentage}%
@@ -466,11 +457,11 @@ const Score = () => {
         {/* Navigation Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center ">
           <button
-              onClick={handleGoHome}
-              className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white rounded-xl font-semibold hover:from-yellow-500 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 relative top-5"
-            >
-              Go Home
-            </button>
+            onClick={handleGoHome}
+            className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white rounded-xl font-semibold hover:from-yellow-500 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 relative top-5"
+          >
+            Go Home
+          </button>
         </div>
       </div>
     </div>

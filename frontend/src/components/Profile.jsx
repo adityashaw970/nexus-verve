@@ -4,8 +4,8 @@ import LandingPage from "./LandingPage.jsx";
 
 const Profile = () => {
   const [user, setUser] = useState("null");
-  const API_URL = "http://localhost:5000";
-  
+  const API_URL = "https://nexus-verve.onrender.com";
+
   useEffect(() => {
     const checkLoggedIn = async () => {
       const res = await fetch(`${API_URL}/auth/status`, {
@@ -28,23 +28,23 @@ const Profile = () => {
   }, []);
 
   const handleLogout = async () => {
-  try {
-    const res = await fetch(`${API_URL}/logout`, {
-      method: "GET",
-      credentials: "include",
-    });
-    const msg = await res.text();
-    alert(msg);
-    
-    // ✅ Clear both localStorage AND sessionStorage
-    localStorage.clear();
-    sessionStorage.clear(); // ADD THIS
-    
-    window.location.href = "/";
-  } catch (err) {
-    console.error("Error logging out:", err);
-  }
-};
+    try {
+      const res = await fetch(`${API_URL}/logout`, {
+        method: "GET",
+        credentials: "include",
+      });
+      const msg = await res.text();
+      alert(msg);
+
+      // ✅ Clear both localStorage AND sessionStorage
+      localStorage.clear();
+      sessionStorage.clear(); // ADD THIS
+
+      window.location.href = "/";
+    } catch (err) {
+      console.error("Error logging out:", err);
+    }
+  };
 
   return (
     <div className="w-full h-screen relative overflow-hidden">

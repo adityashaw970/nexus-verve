@@ -39,19 +39,16 @@ export default function LandingPage() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [isLeaderboardLoading, setIsLeaderboardLoading] = useState(false);
 
-  const API_URL = "http://localhost:5000";
+  const API_URL = "https://nexus-verve.onrender.com";
 
   // Check authentication status
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        const res = await fetch(
-          `${API_URL}/auth/status`,
-          {
-            method: "GET",
-            credentials: "include",
-          }
-        );
+        const res = await fetch(`${API_URL}/auth/status`, {
+          method: "GET",
+          credentials: "include",
+        });
         const data = await res.json();
         setIsLoggedIn(data.loggedIn);
       } catch (error) {
@@ -67,13 +64,10 @@ export default function LandingPage() {
   useEffect(() => {
     const checkLoggedIn = async () => {
       try {
-        const res = await fetch(
-          `${API_URL}/auth/status`,
-          {
-            method: "GET",
-            credentials: "include",
-          }
-        );
+        const res = await fetch(`${API_URL}/auth/status`, {
+          method: "GET",
+          credentials: "include",
+        });
         const msg = await res.json();
 
         if (window.location.href === `${API_URL}/`) {
@@ -89,34 +83,34 @@ export default function LandingPage() {
     checkLoggedIn();
   }, []);
 
-const handleToggleLeaderboard = async () => {
-  if (showLeaderboard) {
-    setShowLeaderboard(false);
-  } else {
-    setIsLeaderboardLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/leaderboard`, {
-        method: "GET",
-        credentials: "include",
-      });
+  const handleToggleLeaderboard = async () => {
+    if (showLeaderboard) {
+      setShowLeaderboard(false);
+    } else {
+      setIsLeaderboardLoading(true);
+      try {
+        const res = await fetch(`${API_URL}/leaderboard`, {
+          method: "GET",
+          credentials: "include",
+        });
 
-      if (res.ok) {
-        const data = await res.json();
-        console.log("Leaderboard data:", data);
-        setLeaderboard(data); // ✅ Use data directly
-        setShowLeaderboard(true);
-      } else {
-        console.error("Failed to fetch leaderboard:", res.status);
-        alert("Failed to load leaderboard. Please try again.");
+        if (res.ok) {
+          const data = await res.json();
+          console.log("Leaderboard data:", data);
+          setLeaderboard(data); // ✅ Use data directly
+          setShowLeaderboard(true);
+        } else {
+          console.error("Failed to fetch leaderboard:", res.status);
+          alert("Failed to load leaderboard. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error fetching leaderboard:", error);
+        alert("Error loading leaderboard. Please check your connection.");
+      } finally {
+        setIsLeaderboardLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching leaderboard:", error);
-      alert("Error loading leaderboard. Please check your connection.");
-    } finally {
-      setIsLeaderboardLoading(false);
     }
-  }
-};
+  };
   const handleRoundClick = (round, index) => {
     if (!round.start) return;
 
@@ -339,9 +333,9 @@ const handleToggleLeaderboard = async () => {
                       <li
                         key={entry._id}
                         className={`text-[2vh] lg:text-[1.7vw] uppercase font-medium flex justify-between items-center ${getMedalBackground(
-                          idx
+                          idx,
                         )} ${getMedalTextColor(
-                          idx
+                          idx,
                         )} rounded-[1vw] px-[1vh] py-[2vh] lg:px-[1.3vw] lg:py-[1vw] relative`}
                       >
                         <span className=" font-bold">#{idx + 1}</span>

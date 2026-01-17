@@ -10,7 +10,7 @@ export default function Login() {
   const signUpEmailRef = useRef(null);
   const signUpPasswordRef = useRef(null);
 
-  const API_URL = "http://localhost:5000";
+  const API_URL = "https://nexus-verve.onrender.com";
 
   const InputField = ({ label, type, name, inputRef }) => (
     <div className="relative z-0 w-full mb-6 group">

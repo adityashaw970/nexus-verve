@@ -580,7 +580,7 @@ mongoose.connect(process.env.MONGODB_URI, {
   maxIdleTimeMS: 30000,
   compressors: ['zlib'],
 }).then(async () => {
-  console.log(`✅ MongoDB Connected - Worker ${process.pid}`);
+  // console.log(`✅ MongoDB Connected - Worker ${process.pid}`);
   
   // Load configs into cache
   const configs = await RoundConfig.find().lean();

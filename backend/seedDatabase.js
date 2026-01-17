@@ -12,7 +12,7 @@ const ROUND_CONFIGS = [
     name: "Round 1",
     scoreMultiplier: 1,
     questionTime: 30000,
-    startTime: "10 18 * * *",
+    startTime: process.env.ROUND1_START || "10 18 * * *",
     totalQuestions: 15,
   },
   {
@@ -20,7 +20,7 @@ const ROUND_CONFIGS = [
     name: "Round 2",
     scoreMultiplier: 2,
     questionTime: 40000,
-    startTime: "30 18 * * *",
+    startTime: process.env.ROUND2_START || "30 18 * * *",
     totalQuestions: 15,
   },
   {
@@ -28,7 +28,7 @@ const ROUND_CONFIGS = [
     name: "Round 3",
     scoreMultiplier: 3,
     questionTime: 60000,
-    startTime: "45 10 * * *",
+    startTime: process.env.ROUND3_START || "45 10 * * *",
     totalQuestions: 15,
   },
   {
@@ -36,7 +36,7 @@ const ROUND_CONFIGS = [
     name: "Bonus Round",
     scoreMultiplier: 5,
     questionTime: 60000,
-    startTime: "00 11 * * *",
+    startTime: process.env.ROUND4_START || "00 11 * * *",
     totalQuestions: 10,
   },
 ];

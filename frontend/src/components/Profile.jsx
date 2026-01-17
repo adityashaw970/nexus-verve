@@ -1,21 +1,23 @@
+//profile.jsx
 import { useEffect, useState } from "react";
 import LandingPage from "./LandingPage.jsx";
 
 const Profile = () => {
   const [user, setUser] = useState("null");
-
+  const API_URL = "http://localhost:5000";
+  
   useEffect(() => {
     const checkLoggedIn = async () => {
-      const res = await fetch("https://nexus-verve.onrender.com/auth/status", {
+      const res = await fetch(`${API_URL}/auth/status`, {
         method: "GET",
         credentials: "include", // important for sending cookies
       });
 
       const msg = await res.json();
       if (msg.loggedIn && msg.user?.email) {
-        setUser(msg.user.email);
+        setUser(msg.user.username);
       }
-      if (window.location.href === "http://localhost:5173/profile") {
+      if (window.location.href === `${API_URL}/profile`) {
         if (!msg.loggedIn || res.status === 404 || !msg.user?.email) {
           window.location.href = "/";
         }
@@ -26,19 +28,23 @@ const Profile = () => {
   }, []);
 
   const handleLogout = async () => {
-    try {
-      const res = await fetch("https://nexus-verve.onrender.com/logout", {
-        method: "GET",
-        credentials: "include", // needed to send cookies
-      });
-      const msg = await res.text();
-      alert(msg);
-      localStorage.clear(); // ✅ Clear localStorage
-      window.location.href = "/";
-    } catch (err) {
-      console.error("Error logging out:", err);
-    }
-  };
+  try {
+    const res = await fetch(`${API_URL}/logout`, {
+      method: "GET",
+      credentials: "include",
+    });
+    const msg = await res.text();
+    alert(msg);
+    
+    // ✅ Clear both localStorage AND sessionStorage
+    localStorage.clear();
+    sessionStorage.clear(); // ADD THIS
+    
+    window.location.href = "/";
+  } catch (err) {
+    console.error("Error logging out:", err);
+  }
+};
 
   return (
     <div className="w-full h-screen relative overflow-hidden">

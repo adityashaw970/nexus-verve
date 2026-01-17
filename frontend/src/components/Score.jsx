@@ -7,13 +7,22 @@ const Score = () => {
   const [userInfo, setUserInfo] = useState(null);
   const [currentRound, setCurrentRound] = useState(1);
   const [allRoundsData, setAllRoundsData] = useState({});
+  const API_URL = "http://localhost:5000";
 
+      const handleGoHome = () => {
+      // ✅ ADD sessionStorage clearing:
+      sessionStorage.removeItem("current_question");
+      sessionStorage.removeItem("question_start_time");
+      
+      // Keep localStorage.clear() commented out if you want
+      window.location.href = "/profile";
+    };
   useEffect(() => {
     const checkAuthAndLoadData = async () => {
       try {
         // Check if user is logged in
         const res = await fetch(
-          "https://nexus-verve.onrender.com/auth/status",
+          `${API_URL}/auth/status`,
           {
             method: "GET",
             credentials: "include",
@@ -54,7 +63,7 @@ const Score = () => {
   const fetchRoundData = async (round) => {
     try {
       const response = await fetch(
-        `https://nexus-verve.onrender.com/get-user-score?round=${round}`,
+        `${API_URL}/get-user-score?round=${round}`,
         {
           method: "GET",
           credentials: "include",
@@ -75,16 +84,16 @@ const Score = () => {
     } catch (error) {
       console.error("Error fetching round data:", error);
       // Fallback to localStorage for current round
-      const savedScore =
-        parseInt(localStorage.getItem(`round_${round}_score`)) || 0;
-      const savedAttempt =
-        parseInt(localStorage.getItem(`round_${round}_attempt`)) || 0;
+      // const savedScore =
+      //   parseInt(localStorage.getItem(`round_${round}_score`)) || 0;
+      // const savedAttempt =
+      //   parseInt(localStorage.getItem(`round_${round}_attempt`)) || 0;
 
       setRoundData({
         round: round,
         roundName: `Round ${round}`,
-        score: savedScore,
-        questionAttempt: savedAttempt,
+        score: 0,
+        questionAttempt: 0,
         totalQuestions: 0,
         scoreMultiplier: 1,
       });
@@ -94,7 +103,7 @@ const Score = () => {
   const fetchTotalData = async () => {
     try {
       const response = await fetch(
-        "https://nexus-verve.onrender.com/get-user-score",
+        `${API_URL}/get-user-score`,
         {
           method: "GET",
           credentials: "include",
@@ -109,7 +118,8 @@ const Score = () => {
       console.error("Error fetching total data:", error);
       // Fallback to localStorage
       const savedTotalScore =
-        parseInt(localStorage.getItem("total_score")) || 0;
+        // parseInt(localStorage.getItem("total_score")) || 0;
+
       setTotalData({
         totalScore: savedTotalScore,
         totalAttempted: 0,
@@ -126,7 +136,7 @@ const Score = () => {
 
       for (const round of rounds) {
         const response = await fetch(
-          `https://nexus-verve.onrender.com/get-user-score?round=${round}`,
+          `${API_URL}/get-user-score?round=${round}`,
           {
             method: "GET",
             credentials: "include",
@@ -456,13 +466,11 @@ const Score = () => {
         {/* Navigation Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center ">
           <button
-            onClick={() => {
-              window.location.href = "/profile";
-            }}
-            className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white rounded-xl font-semibold hover:from-yellow-500 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 relative top-5"
-          >
-            Go Home
-          </button>
+              onClick={handleGoHome}
+              className="px-8 py-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white rounded-xl font-semibold hover:from-yellow-500 hover:to-yellow-600 transition-all duration-200 transform hover:scale-105 relative top-5"
+            >
+              Go Home
+            </button>
         </div>
       </div>
     </div>

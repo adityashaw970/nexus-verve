@@ -21,9 +21,7 @@ function App() {
   }, []);
 
   return (
-    <>
-     
-      
+    <>      
       <Routes>
           <Route path="/" element={ <>
              {loading && <Preloade />}

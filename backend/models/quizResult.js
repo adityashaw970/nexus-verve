@@ -6,10 +6,12 @@ const quizResultSchema = new mongoose.Schema({
     ref: "user",
     required: true,
     unique: true,
+    index: true
   },
   totalScore: {
     type: Number,
     default: 0,
+    index: true
   },
   totalAttemptedQuestions: {
     type: Number,
@@ -34,5 +36,4 @@ quizResultSchema.pre("save", function (next) {
   next();
 });
 
-// ✅ Prevent OverwriteModelError on hot-reload
 module.exports = mongoose.models.quizResult || mongoose.model("quizResult", quizResultSchema);

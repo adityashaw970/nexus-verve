@@ -39,12 +39,14 @@ export default function LandingPage() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [isLeaderboardLoading, setIsLeaderboardLoading] = useState(false);
 
+  const API_URL = "http://localhost:5000";
+
   // Check authentication status
   useEffect(() => {
     const checkStatus = async () => {
       try {
         const res = await fetch(
-          "https://nexus-verve.onrender.com/auth/status",
+          `${API_URL}/auth/status`,
           {
             method: "GET",
             credentials: "include",
@@ -66,7 +68,7 @@ export default function LandingPage() {
     const checkLoggedIn = async () => {
       try {
         const res = await fetch(
-          "https://nexus-verve.onrender.com/auth/status",
+          `${API_URL}/auth/status`,
           {
             method: "GET",
             credentials: "include",
@@ -74,7 +76,7 @@ export default function LandingPage() {
         );
         const msg = await res.json();
 
-        if (window.location.href === "http://localhost:5173/") {
+        if (window.location.href === `${API_URL}/`) {
           if (msg.loggedIn) {
             window.location.href = "/profile";
           }
@@ -87,38 +89,34 @@ export default function LandingPage() {
     checkLoggedIn();
   }, []);
 
-  const handleToggleLeaderboard = async () => {
-    if (showLeaderboard) {
-      setShowLeaderboard(false);
-    } else {
-      setIsLeaderboardLoading(true);
-      try {
-        const res = await fetch(
-          "https://nexus-verve.onrender.com/leaderboard",
-          {
-            method: "GET",
-            credentials: "include",
-          }
-        );
+const handleToggleLeaderboard = async () => {
+  if (showLeaderboard) {
+    setShowLeaderboard(false);
+  } else {
+    setIsLeaderboardLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/leaderboard`, {
+        method: "GET",
+        credentials: "include",
+      });
 
-        if (res.ok) {
-          const data = await res.json();
-          console.log("Leaderboard data:", data); // Debug log
-          setLeaderboard(data);
-          setShowLeaderboard(true);
-        } else {
-          console.error("Failed to fetch leaderboard:", res.status);
-          alert("Failed to load leaderboard. Please try again.");
-        }
-      } catch (error) {
-        console.error("Error fetching leaderboard:", error);
-        alert("Error loading leaderboard. Please check your connection.");
-      } finally {
-        setIsLeaderboardLoading(false);
+      if (res.ok) {
+        const data = await res.json();
+        console.log("Leaderboard data:", data);
+        setLeaderboard(data); // ✅ Use data directly
+        setShowLeaderboard(true);
+      } else {
+        console.error("Failed to fetch leaderboard:", res.status);
+        alert("Failed to load leaderboard. Please try again.");
       }
+    } catch (error) {
+      console.error("Error fetching leaderboard:", error);
+      alert("Error loading leaderboard. Please check your connection.");
+    } finally {
+      setIsLeaderboardLoading(false);
     }
-  };
-
+  }
+};
   const handleRoundClick = (round, index) => {
     if (!round.start) return;
 
@@ -168,9 +166,9 @@ export default function LandingPage() {
           />
         </div>
         {/*Prasanna Greyish-white Squid Game style title */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-0">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-0 top-[-10%] lg:top-[0%]">
           <h1
-            className="text-[20vw] sm:text-[14vw] md:text-[5vw] lg:text-[7vw] font-bold uppercase lg:tracking-tight leading-[18vw]
+            className="text-[14vw] sm:text-[14vw] md:text-[5vw] lg:text-[7vw] font-bold uppercase lg:tracking-tight leading-[18vw]
           font-['Game_of_Squids'] text-gray-200 animate-glowPulse"
           >
             CogniVerse
@@ -178,11 +176,11 @@ export default function LandingPage() {
         </div>
 
         <div className="overflow-hidden">
-          <div className="flex flex-col lg:flex-row lg:justify-between lg:px-[5vw] top-[75%] lg:top-[70%] absolute items-center w-full  z-10 space-y-[2vh] lg:space-y-0">
+          <div className="flex flex-col lg:flex-row lg:justify-between lg:px-[5vw] top-[65%] lg:top-[70%] absolute items-center w-full  z-10 space-y-[2vh] lg:space-y-0">
             {/* Leaderboard Button */}
             <div
               onClick={handleToggleLeaderboard}
-              className={`lg:rounded-[4vw] rounded-[4vh] overflow-hidden lg:h-[10vw] h-[8vh] w-[40vh] lg:w-[10vw] cursor-pointer relative  hover:scale-105 transition-transform ${
+              className={`lg:rounded-[4vw] rounded-[4vh] overflow-hidden lg:h-[10vw] h-[8vh] w-[35vh] lg:w-[10vw] cursor-pointer relative  hover:scale-105 transition-transform ${
                 showLeaderboard ? "opacity-0" : "opacity-100"
               }`}
             >
@@ -216,7 +214,7 @@ export default function LandingPage() {
               </div>
 
               {/* Video Box */}
-              <div className="relative lg:w-[25vw] lg:h-[11vw] h-[11vh] w-[40vh] group overflow-hidden rounded-[2vh_2vh] lg:rounded-[2vh_0vh] [clip-path:polygon(10%_0%,90%_0%,100%_100%,0%_100%)] lg:[clip-path:polygon(10%_0%,100%_0%,100%_100%,0%_100%)] bg-gray-900 flex justify-center items-center">
+              <div className="relative lg:w-[25vw] lg:h-[11vw] h-[11vh] w-[35vh] group overflow-hidden rounded-[2vh_2vh] lg:rounded-[2vh_0vh] [clip-path:polygon(10%_0%,90%_0%,100%_100%,0%_100%)] lg:[clip-path:polygon(10%_0%,100%_0%,100%_100%,0%_100%)] bg-gray-900 flex justify-center items-center">
                 <span className="uppercase absolute font-bold text-white lg:text-[7vw] text-[8vh] tracking-[1vh] z-10">
                   Play
                 </span>

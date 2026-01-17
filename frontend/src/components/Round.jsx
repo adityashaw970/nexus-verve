@@ -1,9 +1,19 @@
-import React, { useState, useEffect, useCallback } from "react";
+/* eslint-disable no-unused-vars */
+/* eslint-disable react-hooks/exhaustive-deps */
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import io from "socket.io-client";
 
-// Initialize socket connection
-const socket = io("https://nexus-verve.onrender.com", {
+const API_URL = "http://localhost:5000";
+
+// Initialize socket connection - OPTIMIZED FOR 500+ USERS
+const socket = io(API_URL, {
   withCredentials: true,
+  reconnection: true,
+  reconnectionAttempts: Infinity, // Keep trying to reconnect
+  reconnectionDelay: 1000, // Faster reconnection
+  reconnectionDelayMax: 5000,
+  transports: ["websocket"], // WebSocket only - no polling!
+  timeout: 20000,
 });
 
 const Round = () => {
@@ -22,56 +32,169 @@ const Round = () => {
   const [currentRound, setCurrentRound] = useState(1);
   const [roundName, setRoundName] = useState("Round 1");
   const [scoreMultiplier, setScoreMultiplier] = useState(1);
-  const [questionTime, setQuestionTime] = useState(10);
+  const [questionTime, setQuestionTime] = useState(30);
+  const [isConnected, setIsConnected] = useState(false);
+  const [connectionError, setConnectionError] = useState(null);
 
-  // Check authentication and get current round info
+  const questionTimerRef = useRef(null);
+
+  // ========== HEARTBEAT MECHANISM ==========
   useEffect(() => {
-    const checkLoggedIn = async () => {
-      try {
-        const res = await fetch(
-          "https://nexus-verve.onrender.com/auth/status",
-          {
-            method: "GET",
-            credentials: "include",
-          }
-        );
-
-        const msg = await res.json();
-        if (!msg.loggedIn || res.status === 404 || !msg.user?.email) {
-          window.location.href = "/login";
-          return;
-        }
-
-        // Determine which round based on URL or other logic
-        const urlPath = window.location.pathname;
-        let round = 1;
-        if (urlPath.includes("round2")) round = 2;
-        else if (urlPath.includes("round3")) round = 3;
-        else if (urlPath.includes("round4")) round = 4;
-
-        setCurrentRound(round);
-
-        // Fetch round-specific user data
-        await fetchCurrentRoundData(round);
-      } catch (error) {
-        console.error("Auth check failed:", error);
-        window.location.href = "/login";
+    const heartbeatInterval = setInterval(() => {
+      if (socket.connected) {
+        socket.emit("heartbeat");
       }
-    };
+    }, 25000); // Every 25 seconds
 
-    checkLoggedIn();
+    return () => clearInterval(heartbeatInterval);
   }, []);
 
-  // Fetch current round data from backend
+  // ========== CONNECTION MANAGEMENT ==========
+  useEffect(() => {
+    socket.on("connect", () => {
+      console.log("✅ Connected to server");
+      setIsConnected(true);
+      setConnectionError(null);
+      // Request current question state
+      socket.emit("get-initial");
+    });
+
+    socket.on("disconnect", () => {
+      console.log("❌ Disconnected from server");
+      setIsConnected(false);
+    });
+
+    socket.on("connect_error", (error) => {
+      console.error("Connection error:", error);
+      setConnectionError("Connection lost. Reconnecting...");
+    });
+
+    return () => {
+      socket.off("connect");
+      socket.off("disconnect");
+      socket.off("connect_error");
+    };
+  }, []);
+
+// ========== AUTHENTICATION & RESTORE FROM URL ==========
+useEffect(() => {
+  const checkLoggedIn = async () => {
+    try {
+      const res = await fetch(`${API_URL}/auth/status`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      const msg = await res.json();
+      if (!msg.loggedIn || res.status === 404 || !msg.user?.email) {
+        window.location.href = "/login";
+        return;
+      }
+
+      // Determine which round based on URL
+      const urlPath = window.location.pathname;
+      let round = 1;
+      if (urlPath.includes("round2")) round = 2;
+      else if (urlPath.includes("round3")) round = 3;
+      else if (urlPath.includes("round4")) round = 4;
+
+      setCurrentRound(round);
+
+      // ✅ RESTORE QUESTION FROM URL PARAMS (if exists)
+      const urlParams = new URLSearchParams(window.location.search);
+      const qIndex = urlParams.get('qIndex');
+      const qRound = urlParams.get('qRound');
+      const qTime = urlParams.get('qTime');
+      const qTotal = urlParams.get('qTotal');
+      const qName = urlParams.get('qName');
+      const qMult = urlParams.get('qMult');
+      const qText = urlParams.get('qText');
+
+      if (qIndex !== null && qRound !== null && qTime !== null && qText !== null) {
+        // We have a saved question in URL
+        const questionData = {
+          index: parseInt(qIndex),
+          round: parseInt(qRound),
+          totalQuestions: parseInt(qTotal || 0),
+          roundName: qName || `Round ${qRound}`,
+          scoreMultiplier: parseInt(qMult || 1),
+          question: decodeURIComponent(qText)
+        };
+
+        const startTime = parseInt(qTime);
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        
+        // Determine question time
+        const timeForQuestion =
+          questionData.round === 1 ? 30 :
+          questionData.round === 2 ? 40 :
+          questionData.round === 3 ? 60 :
+          questionData.round === 4 ? 60 : 60;
+        
+        const remaining = Math.max(0, timeForQuestion - elapsed);
+
+        console.log("✅ Restoring from URL params:");
+        console.log(`- Question Index: ${questionData.index}`);
+        console.log(`- Elapsed: ${elapsed}s, Remaining: ${remaining}s`);
+
+        // Restore all state
+        setCurrentQuestion(questionData);
+        setCurrentIndex(questionData.index);
+        setCurrentRound(questionData.round);
+        setRoundName(questionData.roundName);
+        setScoreMultiplier(questionData.scoreMultiplier);
+        setTotalQuestions(questionData.totalQuestions);
+        setQuestionTime(timeForQuestion);
+        setTimeLeft(remaining);
+        setIsQuizActive(true);
+
+        // ✅ Restore user answers for this round
+        let restoredAnswers = {}; // Declare outside try-catch for debug logging
+        const savedAnswers = localStorage.getItem(`temp_answers_${questionData.round}`);
+        if (savedAnswers) {
+          try {
+            restoredAnswers = JSON.parse(savedAnswers);
+            setUserAnswers(restoredAnswers);
+            console.log("✅ Restored user answers:", restoredAnswers);
+          } catch (e) {
+            console.error("Failed to restore answers:", e);
+          }
+        }
+
+        // If time is up, auto-submit
+        if (remaining <= 0) {
+          setIsSubmitted(true);
+        }
+
+        // ✅ Debug logging
+        console.log("🔍 Restoration Debug:");
+        console.log("- Current Question:", questionData);
+        console.log("- Time Left:", remaining);
+        console.log("- Question Time:", timeForQuestion);
+        console.log("- User Answers:", restoredAnswers);
+      } else {
+        // No saved question, request current state from server
+        console.log("⚠️ No URL params found, requesting from server");
+        socket.emit("get-initial");
+      }
+
+      // Fetch round-specific user data from backend
+      await fetchCurrentRoundData(round);
+    } catch (error) {
+      console.error("Auth check failed:", error);
+      window.location.href = "/login";
+    }
+  };
+
+  checkLoggedIn();
+}, []); // Run once on mount
+  // ========== FETCH ROUND DATA FROM BACKEND (NO LOCALSTORAGE FALLBACK) ==========
   const fetchCurrentRoundData = async (round) => {
     try {
-      const response = await fetch(
-        `https://nexus-verve.onrender.com/get-user-score?round=${round}`,
-        {
-          method: "GET",
-          credentials: "include",
-        }
-      );
+      const response = await fetch(`${API_URL}/get-user-score?round=${round}`, {
+        method: "GET",
+        credentials: "include",
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -80,26 +203,13 @@ const Round = () => {
         setQuestionAttempt(data.questionAttempt || 0);
         setRoundName(data.roundName || `Round ${round}`);
         setScoreMultiplier(data.scoreMultiplier || 1);
-
-        // Save to localStorage for persistence
-        localStorage.setItem(
-          `round_${round}_score`,
-          data.score?.toString() || "0"
-        );
-        localStorage.setItem(
-          `round_${round}_attempt`,
-          data.questionAttempt?.toString() || "0"
-        );
       }
 
-      // Also fetch total score across all rounds
-      const totalResponse = await fetch(
-        "https://nexus-verve.onrender.com/get-user-score",
-        {
-          method: "GET",
-          credentials: "include",
-        }
-      );
+      // Fetch total score across all rounds
+      const totalResponse = await fetch(`${API_URL}/get-user-score`, {
+        method: "GET",
+        credentials: "include",
+      });
 
       if (totalResponse.ok) {
         const totalData = await totalResponse.json();
@@ -107,268 +217,230 @@ const Round = () => {
       }
     } catch (error) {
       console.error("Error fetching round data:", error);
-      // Fallback to localStorage
-      const savedScore =
-        parseInt(localStorage.getItem(`round_${round}_score`)) || 0;
-      const savedAttempt =
-        parseInt(localStorage.getItem(`round_${round}_attempt`)) || 0;
-      setRoundScore(savedScore);
-      setQuestionAttempt(savedAttempt);
+      // Don't fallback to localStorage - show error state
+      setRoundScore(0);
+      setQuestionAttempt(0);
     }
   };
 
-  // Socket.IO event listeners
-  useEffect(() => {
-    // Request initial question quiz data
-    socket.emit("get-initial");
+ // ========== SOCKET EVENT LISTENERS ==========
+useEffect(() => {
+  socket.on("question", (questionData) => {
+    console.log("📩 Received question:", questionData);
 
-    // Listen for question updates
-    socket.on("question", (questionData) => {
-      // Update question data
-      setCurrentQuestion(questionData);
-      setCurrentIndex(questionData.index || 0);
-      setCurrentRound(questionData.round || currentRound);
-      setRoundName(
-        questionData.roundName || `Round ${questionData.round || currentRound}`
-      );
-      setScoreMultiplier(questionData.scoreMultiplier || 1);
-      setTotalQuestions(questionData.totalQuestions || 0);
+    // ✅ Clear old URL params first
+    const url = new URL(window.location);
+    url.searchParams.delete('qIndex');
+    url.searchParams.delete('qRound');
+    url.searchParams.delete('qTime');
+    url.searchParams.delete('qTotal');
+    url.searchParams.delete('qName');
+    url.searchParams.delete('qMult');
+    url.searchParams.delete('qText');
+    
+    // ✅ Now set new URL params
+    url.searchParams.set('qIndex', questionData.index || 0);
+    url.searchParams.set('qRound', questionData.round);
+    url.searchParams.set('qTime', Date.now().toString());
+    url.searchParams.set('qTotal', questionData.totalQuestions || 0);
+    url.searchParams.set('qName', questionData.roundName || '');
+    url.searchParams.set('qMult', questionData.scoreMultiplier || 1);
+    url.searchParams.set('qText', encodeURIComponent(questionData.question));
+    window.history.replaceState({}, '', url);
 
-      // Set question time based on round configuration
-      const timeForQuestion =
-        questionData.round === 1
-          ? 30
-          : questionData.round === 2
-          ? 40
-          : questionData.round === 3
-          ? 60
-          : questionData.round === 4
-          ? 60
-          : 60;
-      setQuestionTime(timeForQuestion);
-      setTimeLeft(timeForQuestion);
+    // Update question data
+    setCurrentQuestion(questionData);
+    setCurrentIndex(questionData.index || 0);
+    setCurrentRound(questionData.round || currentRound);
+    setRoundName(
+      questionData.roundName || `Round ${questionData.round || currentRound}`
+    );
+    setScoreMultiplier(questionData.scoreMultiplier || 1);
+    setTotalQuestions(questionData.totalQuestions || 0);
 
-      setIsSubmitted(false);
-      setHasQuitted(false);
-      setQuestionAttempt((prev) => {
-        const updated = prev + 1;
-        localStorage.setItem(
-          `round_${currentRound}_attempt`,
-          updated.toString()
-        );
-        return updated;
-      });
+    // Set question time based on round configuration
+    const timeForQuestion =
+      questionData.round === 1 ? 30 :
+      questionData.round === 2 ? 40 :
+      questionData.round === 3 ? 60 :
+      questionData.round === 4 ? 60 : 60;
+    
+    setQuestionTime(timeForQuestion);
+    setTimeLeft(timeForQuestion);
 
-      // Reset start time
-      localStorage.setItem("quiz_question_start", Date.now().toString());
-    });
+    setIsSubmitted(false);
+    setHasQuitted(false);
+    setQuestionAttempt((prev) => prev + 1);
+  });
 
-    // Listen for quiz end
-    socket.on("quiz-end", (data) => {
-      console.log("Quiz ended:", data);
-      setIsSubmitted(true);
-      setIsQuizActive(false);
-      handleQuizComplete();
-    });
+  // Listen for quiz end
+  socket.on("quiz-end", (data) => {
+    console.log("🏁 Quiz ended:", data);
+    setIsSubmitted(true);
+    setIsQuizActive(false);
+    handleQuizComplete();
+  });
 
-    // Listen for score updates
-    socket.on("score-update", (scoreData) => {
-      console.log("Score update:", scoreData);
-      setRoundScore(scoreData.roundScore || 0);
-      setTotalScore(scoreData.totalScore || 0);
-      setQuestionAttempt(scoreData.roundAttempted || 0);
+  // Listen for score updates
+  socket.on("score-update", (scoreData) => {
+    console.log("🎯 Score update:", scoreData);
+    setRoundScore(scoreData.roundScore || 0);
+    setTotalScore(scoreData.totalScore || 0);
+    setQuestionAttempt(scoreData.roundAttempted || 0);
+  });
 
-      // Update localStorage
-      localStorage.setItem(
-        `round_${currentRound}_score`,
-        scoreData.roundScore?.toString() || "0"
-      );
-      localStorage.setItem(
-        `round_${currentRound}_attempt`,
-        scoreData.roundAttempted?.toString() || "0"
-      );
-      localStorage.setItem(
-        "total_score",
-        scoreData.totalScore?.toString() || "0"
-      );
-    });
+  socket.on("error", (errorData) => {
+    console.error("Server error:", errorData);
+    alert(errorData.message || "An error occurred");
+  });
 
-    // Cleanup socket listeners
-    return () => {
-      socket.off("question");
-      socket.off("quiz-end");
-      socket.off("score-update");
-    };
-  }, [currentRound]);
+  // Cleanup socket listeners
+  return () => {
+    socket.off("question");
+    socket.off("quiz-end");
+    socket.off("score-update");
+    socket.off("error");
+  };
+}, [currentRound]);
 
-  // Load saved state
-  useEffect(() => {
-    const savedAnswers =
-      JSON.parse(localStorage.getItem(`round_${currentRound}_answers`)) || {};
-    const savedIndex =
-      parseInt(localStorage.getItem(`round_${currentRound}_index`)) || 0;
-    const submitted =
-      localStorage.getItem(`round_${currentRound}_submitted`) === "true";
-    const quitted =
-      localStorage.getItem(`round_${currentRound}_quitted`) === "true";
-
-    // If quiz was already completed, redirect to score page
-    if (submitted) {
-      window.location.href = `/score?round=${currentRound}`;
-      return;
+    // ========== COUNTDOWN TIMER USING URL PARAMS ==========
+useEffect(() => {
+  if (!isQuizActive || !currentQuestion || hasQuitted || isSubmitted) {
+    if (questionTimerRef.current) {
+      clearInterval(questionTimerRef.current);
     }
+    return;
+  }
 
-    if (quitted) {
-      setHasQuitted(true);
-    }
+  // ✅ Get start time from URL (more reliable than sessionStorage)
+  const urlParams = new URLSearchParams(window.location.search);
+  const qTime = urlParams.get('qTime');
+  const startTime = qTime ? parseInt(qTime) : Date.now();
 
-    setUserAnswers(savedAnswers);
-    setCurrentIndex(savedIndex);
+  // If no time in URL, set it now
+  if (!qTime) {
+    const url = new URL(window.location);
+    url.searchParams.set('qTime', startTime.toString());
+    window.history.replaceState({}, '', url);
+  }
 
-    const questionStartTime = localStorage.getItem("quiz_question_start");
+  questionTimerRef.current = setInterval(() => {
     const now = Date.now();
-    if (questionStartTime) {
-      const elapsed = Math.floor((now - parseInt(questionStartTime)) / 1000);
-      const remaining = questionTime - elapsed;
-      setTimeLeft(remaining > 0 ? remaining : 0);
-    } else {
-      localStorage.setItem("quiz_question_start", Date.now().toString());
+    const elapsed = Math.floor((now - startTime) / 1000);
+    const remaining = Math.max(0, questionTime - elapsed);
+    setTimeLeft(remaining);
+
+    // Auto-submit when time is up
+    if (remaining <= 0) {
+      clearInterval(questionTimerRef.current);
+      if (!isSubmitted) {
+        handleAutoSubmit();
+      }
     }
-  }, [currentRound, questionTime]);
+  }, 1000);
 
-  // Countdown timer
-  useEffect(() => {
-    if (
-      !isQuizActive ||
-      isSubmitted ||
-      timeLeft <= 0 ||
-      !currentQuestion ||
-      hasQuitted
-    )
-      return;
-
-    const interval = setInterval(() => {
-      const startTime = localStorage.getItem("quiz_question_start");
-      if (startTime) {
-        const now = Date.now();
-        const elapsed = Math.floor((now - parseInt(startTime)) / 1000);
-        const remaining = questionTime - elapsed;
-        const newTime = remaining > 0 ? remaining : 0;
-        setTimeLeft(newTime);
-
-        if (newTime <= 0) {
-          clearInterval(interval);
-          handleAutoSubmit();
-        }
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [
-    isQuizActive,
-    isSubmitted,
-    timeLeft,
-    currentQuestion,
-    hasQuitted,
-    questionTime,
-  ]);
-
-  // Handle quiz completion
-  const handleQuizComplete = useCallback(() => {
-    localStorage.setItem(`round_${currentRound}_submitted`, "true");
-    localStorage.setItem(`round_${currentRound}_score`, roundScore.toString());
-
-    // Small delay to ensure data is saved
-    setTimeout(() => {
-      window.location.href = `/score?round=${currentRound}`;
-    }, 1000);
-  }, [currentRound, roundScore]);
-
-  // Handle answer submission via Socket.IO
-  const sendAnswer = async () => {
-    if (!currentQuestion || isSubmitted || isLoading) return;
-
-    setIsLoading(true);
-    try {
-      const currentAnswer = userAnswers[currentIndex] || "";
-      const res = await fetch("https://nexus-verve.onrender.com/auth/status", {
-        credentials: "include",
-      });
-      const data = await res.json();
-
-      if (data.loggedIn) {
-        // Submit answer in array format as requested
-        socket.emit("answer", {
-          answer: [currentAnswer.trim()],
-          userId: data.user.id,
-          questionIndex:
-            currentQuestion.index !== undefined
-              ? currentQuestion.index
-              : currentIndex,
-          roundNumber: currentRound,
-        });
-
-        setIsSubmitted(true);
-        console.log("Answer submitted:", currentAnswer.trim());
-      } else {
-        alert("You must be logged in to submit answers");
-      }
-    } catch (error) {
-      console.error("Failed to send answer:", error);
-      alert("Failed to submit answer. Please try again.");
-    } finally {
-      setIsLoading(false);
+  return () => {
+    if (questionTimerRef.current) {
+      clearInterval(questionTimerRef.current);
     }
   };
+}, [currentQuestion, isQuizActive, hasQuitted, questionTime, isSubmitted]);
 
-  const handleAutoSubmit = useCallback(() => {
-    if (isSubmitted || isLoading || hasQuitted) return;
-    console.log("Auto-submitting due to timeout");
-    sendAnswer();
-  }, [isSubmitted, isLoading, hasQuitted]);
 
-  // Handle manual answer submission
+  const handleQuizComplete = useCallback(() => {
+  // Clear URL params on quiz end
+  const url = new URL(window.location);
+  url.searchParams.delete('qIndex');
+  url.searchParams.delete('qRound');
+  url.searchParams.delete('qTime');
+  url.searchParams.delete('qTotal');
+  url.searchParams.delete('qName');
+  url.searchParams.delete('qMult');
+  url.searchParams.delete('qText');
+  window.history.replaceState({}, '', url);
+  
+  // ✅ ADD THIS: Clear temp answers
+  localStorage.removeItem(`temp_answers_${currentRound}`);
+  
+  setTimeout(() => {
+    window.location.href = `/score?round=${currentRound}`;
+  }, 1000);
+}, [currentRound]);
+  // ========== ANSWER SUBMISSION ==========
+const sendAnswer = useCallback(async () => {
+  if (!currentQuestion || isSubmitted || isLoading) return;
+
+  setIsLoading(true);
+  try {
+    const currentAnswer = userAnswers[currentIndex] || "";
+    const res = await fetch(`${API_URL}/auth/status`, {
+      credentials: "include",
+    });
+    const data = await res.json();
+
+    if (data.loggedIn) {
+      // Submit answer in array format
+      socket.emit("answer", {
+        answer: [currentAnswer.trim()],
+        userId: data.user.id,
+        questionIndex:
+          currentQuestion.index !== undefined
+            ? currentQuestion.index
+            : currentIndex,
+      });
+
+      setIsSubmitted(true);
+      console.log("✅ Answer submitted:", currentAnswer.trim());
+    } else {
+      alert("You must be logged in to submit answers");
+    }
+  } catch (error) {
+    console.error("Failed to send answer:", error);
+    alert("Failed to submit answer. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+}, [currentQuestion, isSubmitted, isLoading, userAnswers, currentIndex]); 
+ 
+const handleAutoSubmit = useCallback(() => {
+  if (isSubmitted || isLoading || hasQuitted) return;
+  console.log("⏰ Auto-submitting due to timeout");
+  sendAnswer();
+}, [isSubmitted, isLoading, hasQuitted, sendAnswer]); // ✅ Add sendAnswer
+
+// Handle manual answer submission
   const handleManualSubmit = () => {
     if (isSubmitted || isLoading || hasQuitted) return;
     sendAnswer();
   };
 
-  // Handle answer change (only save locally, no auto-submit)
-  const handleAnswerChange = (e) => {
-    if (hasQuitted || isSubmitted) return;
+// ========== HANDLE ANSWER CHANGE ==========
+const handleAnswerChange = (e) => {
+  if (hasQuitted || isSubmitted) return;
 
-    const newAnswer = e.target.value;
-    const newAnswers = { ...userAnswers };
-    newAnswers[currentIndex] = newAnswer;
-    setUserAnswers(newAnswers);
+  const newAnswer = e.target.value;
+  const newAnswers = { ...userAnswers };
+  newAnswers[currentIndex] = newAnswer;
+  setUserAnswers(newAnswers);
 
-    // Only save to localStorage, no socket emission
-    localStorage.setItem(
-      `round_${currentRound}_answers`,
-      JSON.stringify(newAnswers)
-    );
-    localStorage.setItem(
-      `round_${currentRound}_index`,
-      currentIndex.toString()
-    );
-  };
+  // ✅ Store answers in localStorage (only for current session)
+  localStorage.setItem(`temp_answers_${currentRound}`, JSON.stringify(newAnswers));
+};
 
+
+  // ========== HANDLE QUIT ==========
   const handleQuit = async () => {
     if (
       window.confirm(
         "Are you sure you want to quit the quiz? Your current progress will be saved and you'll see your results."
       )
     ) {
-      // Save current answers to backend before quitting
       const currentAnswer = userAnswers[currentIndex] || "";
 
       try {
-        const res = await fetch(
-          "https://nexus-verve.onrender.com/auth/status",
-          {
-            credentials: "include",
-          }
-        );
+        const res = await fetch(`${API_URL}/auth/status`, {
+          credentials: "include",
+        });
         const data = await res.json();
 
         if (data.loggedIn && currentAnswer.trim()) {
@@ -377,18 +449,10 @@ const Round = () => {
             answer: [currentAnswer.trim()],
             userId: data.user.id,
             questionIndex: currentQuestion?.index || currentIndex,
-            roundNumber: currentRound,
           });
         }
 
-        // Save quit state and score
-        localStorage.setItem(`round_${currentRound}_quitted`, "true");
-        localStorage.setItem(
-          `round_${currentRound}_score`,
-          roundScore.toString()
-        );
-
-        // Redirect to score page
+        // Redirect to score page immediately
         window.location.href = `/score?round=${currentRound}`;
       } catch (error) {
         console.error("Error during quit:", error);
@@ -398,26 +462,13 @@ const Round = () => {
   };
 
   const handleRejoin = () => {
-    localStorage.removeItem(`round_${currentRound}_quitted`);
     setHasQuitted(false);
     setIsQuizActive(true);
     // Re-request current question
     socket.emit("get-initial");
   };
 
-  const getProgressPercentage = () => {
-    return (timeLeft / questionTime) * 100;
-  };
-
-  const getProgressColor = () => {
-    const percentage = getProgressPercentage();
-    if (percentage > 60) return "bg-gradient-to-r from-green-400 to-green-500";
-    if (percentage > 30)
-      return "bg-gradient-to-r from-yellow-400 to-yellow-500";
-    return "bg-gradient-to-r from-red-400 to-red-500";
-  };
-
-  // Get current set info (for rounds with set structure)
+  // ========== GET CURRENT SET INFO ==========
   const getCurrentSet = () => {
     if (!currentQuestion) return { setNumber: 1, questionInSet: 1 };
     const questionIndex = currentQuestion.index || currentIndex;
@@ -426,7 +477,7 @@ const Round = () => {
     return { setNumber, questionInSet };
   };
 
-  // Get progress indicators for current set
+  // ========== PROGRESS INDICATORS ==========
   const getSetProgressIndicators = () => {
     const { setNumber, questionInSet } = getCurrentSet();
     const setStartIndex = (setNumber - 1) * 5;
@@ -451,7 +502,7 @@ const Round = () => {
     });
   };
 
-  // Display previous answers for the final question of each set
+  // ========== DISPLAY PREVIOUS ANSWERS ==========
   const getPreviousAnswersForSet = () => {
     const { setNumber, questionInSet } = getCurrentSet();
     if (questionInSet !== 5) return null;
@@ -485,6 +536,28 @@ const Round = () => {
 
   return (
     <div className="font-[GilM] flex flex-col items-center justify-center min-h-screen bg-black text-white overflow-hidden relative">
+      
+      {/* CONNECTION STATUS INDICATOR */}
+      {!isConnected && (
+        <div className="fixed top-4 right-4 z-50 bg-red-500/90 backdrop-blur-md px-6 py-3 rounded-2xl border border-red-300/50 shadow-lg animate-pulse">
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-white rounded-full animate-ping"></div>
+            <span className="text-white font-bold">
+              {connectionError || "Reconnecting..."}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {isConnected && (
+        <div className="fixed top-4 right-4 z-50 bg-green-500/90 backdrop-blur-md px-6 py-3 rounded-2xl border border-green-300/50 shadow-lg">
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-white rounded-full"></div>
+            <span className="text-white font-bold">Connected</span>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       <div className="relative z-20 w-full h-full flex flex-col items-center justify-center ">
         {hasQuitted ? (
@@ -523,8 +596,6 @@ const Round = () => {
           </div>
         ) : currentQuestion ? (
           <>
-            {/* Header */}
-
             <video
               src="https://res.cloudinary.com/dke15c3sv/video/upload/v1760723119/landing_wxbihl.mp4"
               autoPlay
@@ -562,14 +633,14 @@ const Round = () => {
                   <span className="text-white font-bold text-xl px-[1vh]">
                     Time Remaining
                   </span>
-                  <span className="text-white font-mono text-2xl  px-4 py-2 rounded-xl">
+                  <span className={`text-white font-mono text-2xl px-4 py-2 rounded-xl ${timeLeft <= 10 ? 'animate-pulse text-red-400' : ''}`}>
                     {timeLeft}s
                   </span>
                 </div>
               </div>
 
               {/* Question Display */}
-              <div className="w-full lg:max-w-[80%]  animate-fade-in">
+              <div className="w-full lg:max-w-[80%] animate-fade-in">
                 <div className="bg-black/60 backdrop-blur-lg rounded-3xl p-8 border border-white/30 shadow-2xl">
                   <h2 className="text-4xl font-bold text-center mb-6 bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
                     {questionInSet === 5
@@ -593,9 +664,7 @@ const Round = () => {
                       ? "🎯 Guess the answer according to all your previous clues"
                       : "Write your answer here"
                   }
-                  disabled={
-                    isSubmitted || timeLeft <= 0 || !isQuizActive || isLoading
-                  }
+                  disabled={isSubmitted || isLoading}
                 />
               </div>
 
@@ -603,18 +672,10 @@ const Round = () => {
               <button
                 onClick={handleManualSubmit}
                 disabled={
-                  isSubmitted ||
-                  timeLeft <= 0 ||
-                  !isQuizActive ||
-                  isLoading ||
-                  !userAnswers[currentIndex]?.trim()
+                  isSubmitted || isLoading || !userAnswers[currentIndex]?.trim()
                 }
                 className={`lg:px-12 px-25 py-4 lg:py-4 rounded-3xl text-[3vh] lg:text-xl font-bold transition-all duration-300 mb-8 transform hover:scale-105 shadow-lg ${
-                  isSubmitted ||
-                  timeLeft <= 0 ||
-                  !isQuizActive ||
-                  isLoading ||
-                  !userAnswers[currentIndex]?.trim()
+                  isSubmitted || isLoading || !userAnswers[currentIndex]?.trim()
                     ? "bg-gray-500/50 text-gray-400 cursor-not-allowed backdrop-blur-sm"
                     : "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-2xl"
                 }`}
@@ -625,9 +686,9 @@ const Round = () => {
                     <span>Submitting...</span>
                   </div>
                 ) : isSubmitted ? (
-                  "Submitted"
+                  "Submitted ✓"
                 ) : (
-                  " Submit Answer"
+                  "Submit Answer"
                 )}
               </button>
 
@@ -648,10 +709,9 @@ const Round = () => {
               loop
               preload="metadata"
               poster="https://res.cloudinary.com/dke15c3sv/image/upload/v1760795245/Screenshot_2025-10-18_190026_hvl9mt.png"
-              className="h-screen w-full object-cover z-10 inset-0"
-              src="https://res.cloudinary.com/dke15c3sv/video/upload/v1760795224/Recording_2025-10-18_191130_amnqj3.mp4"
+              className="absolute top-[10%] left-[5%] lg:left-[0%] lg:top-[0%] h-[70%] w-[100%] lg:h-screen lg:w-full object-cover z-10 inset-0"
+              src="https://res.cloudinary.com/dke15c3sv/video/upload/v1768596871/Untitled_design_xkyatp.mp4"
             ></video>
-            {/* Overlay content */}
             <div className="absolute inset-0 flex top-[-40%] flex-col items-center justify-center text-center text-white animate-fade-in z-50">
               <p className="text-3xl sm:text-3xl mb-8 font-medium">
                 Waiting for {roundName} questions...

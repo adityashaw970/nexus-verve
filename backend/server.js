@@ -1,814 +1,414 @@
-// ==== server.js ====
-const dotenv = require("dotenv");
+// ==== Enhanced server.js - Optimized for 500+ concurrent users on Render Free Tier ====
+require("dotenv").config();
+
+const cluster = require("cluster");
+const os = require("os");
+
+// CRITICAL: Limit workers for free tier (512MB RAM)
+const WORKERS = Math.min(2, os.cpus().length);
+
+if (cluster.isPrimary) {
+  console.log(`Primary ${process.pid} running`);
+
+  for (let i = 0; i < WORKERS; i++) {
+    cluster.fork();
+  }
+
+  cluster.on("exit", (worker) => {
+    console.log(`Worker ${worker.process.pid} died, restarting...`);
+    cluster.fork();
+  });
+
+  return;
+}
+
+// ================== WORKER PROCESS ==================
+
 const express = require("express");
-const cors = require("cors");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const mongoose = require("mongoose");
-const cookieParser = require("cookie-parser");
 const http = require("http");
+const mongoose = require("mongoose");
+const cors = require("cors");
+const helmet = require("helmet");
+const cookieParser = require("cookie-parser");
+const bcrypt = require("bcryptjs");
+const jwt = require("jwt-simple");
+const cron = require("node-cron");
+const moment = require("moment-timezone");
+
 const { Server } = require("socket.io");
+
+const Redis = require("ioredis");
+const { createAdapter } = require("@socket.io/redis-adapter");
+
+// ===== MODELS =====
 const userModel = require("./models/user");
 const quizResultModel = require("./models/quizResult");
 const roundResultModel = require("./models/roundResult");
-const cron = require("node-cron");
-const moment = require("moment-timezone");
+const Question = require("./models/question");
+const RoundConfig = require("./models/roundConfig");
+
+// ================= SERVER =================
+
 const app = express();
 const server = http.createServer(app);
+
+// ===== SOCKET.IO - WEBSOCKET ONLY (NO POLLING) =====
+
 const io = new Server(server, {
-  cors: {
-    origin: true,
-    credentials: true,
+  transports: ["websocket"], // Critical: No polling!
+  pingInterval: 30000,
+  pingTimeout: 70000,
+  maxHttpBufferSize: 300000, // 300KB limit
+  perMessageDeflate: {
+    threshold: 1024 // Only compress > 1KB
   },
+  connectTimeout: 45000,
+  allowEIO3: true,
+  cookie: false,
 });
-const helmet = require("helmet");
-const { configDotenv } = require("dotenv");
+
+// ================= REDIS ADAPTER =================
+
+const pubClient = new Redis(process.env.REDIS_URL, {
+  maxRetriesPerRequest: 3,
+  enableReadyCheck: false,
+  lazyConnect: true,
+});
+
+const subClient = pubClient.duplicate();
+
+io.adapter(createAdapter(pubClient, subClient));
+
+// ================= MIDDLEWARE =================
+
+app.use(cors({ origin: true, credentials: true }));
+app.use(express.json({ limit: "512kb" })); // Reduced from 1MB
+app.use(cookieParser());
 app.use(helmet());
-const JWT_SECRET = "shhh";
-dotenv.config();
 
-const QUIZ_CONFIG = {
-  1: {
-    name: "Round 1",
-    scoreMultiplier: 1,
-    questionTime: 30000, // 30 seconds
-    startTime: "*/40 */00 * * *",
-    questions: [
-      // ===== Round 1 - Set 1 =====
-      {
-        day: "Day 1",
-        round: "Round 1",
-        set: 1,
-        question:
-          "What is the Japanese term for animation, often characterized by colorful artwork, fantastical themes, and vibrant characters?",
-        answer: "Anime",
-      },
-      {
-        day: "Day 1",
-        round: "Round 1",
-        set: 1,
-        question:
-          "In which popular Nintendo franchise do players battle in various arenas using characters like Mario, Link, and Pikachu?",
-        answer: "Super Smash Bros",
-      },
-      {
-        day: "Day 1",
-        round: "Round 1",
-        set: 1,
-        question:
-          "What is the name of the iconic Japanese media franchise created by Satoshi Tajiri in 1996, featuring special creatures that can be tamed and trained?",
-        answer: "Pokemon",
-      },
-      {
-        day: "Day 1",
-        round: "Round 1",
-        set: 1,
-        question:
-          "This device used in the Pokémon series is an electronic encyclopedia of all types of Pokémon, vital for new trainers.",
-        answer: "Pokedex",
-      },
-      {
-        day: "Day 1",
-        round: "Round 1",
-        set: 1,
-        question:
-          "Who is the iconic protagonist of the Pokémon anime series, known for his dream of becoming a Pokémon Master and his bond with his partner Pikachu?",
-        answer: "Ash Ketchum",
-      },
+const JWT_SECRET = process.env.JWT_SECRET || "shhh";
 
-      // ===== Round 1 - Set 2 =====
-      {
-        day: "Day 1",
-        round: "Round 1",
-        set: 2,
-        question:
-          "What is the term for a player who is primarily responsible for scoring runs and defending the wicket in the game of cricket?",
-        answer: "Batsman",
-      },
-      {
-        day: "Day 1",
-        round: "Round 1",
-        set: 2,
-        question:
-          "What is the prestigious annual cricket event, where the best players from various franchises compete, and has become immensely popular in India since its inception in 2008?",
-        answer: "IPL / Indian Premier League",
-      },
-      {
-        day: "Day 1",
-        round: "Round 1",
-        set: 2,
-        question:
-          "Which Indian city, known for its vibrant culture and as a major IT hub, is home to a top IPL team and has a significant cricket following?",
-        answer: "Bangalore",
-      },
-      {
-        day: "Day 1",
-        round: "Round 1",
-        set: 2,
-        question:
-          "This person got married to a famous celebrity in December of 2017. Which famous celebrity did he get married to from the world of Bollywood?",
-        answer: "Anushka Sharma",
-      },
-      {
-        day: "Day 1",
-        round: "Round 1",
-        set: 2,
-        question:
-          "Who is this prolific Indian cricketer, renowned for his batting prowess, passionate playing style, and arguably the best test captain India has ever produced?",
-        answer: "Virat Kohli",
-      },
+// ================= MEMORY OPTIMIZATION =================
 
-      // ===== Round 1 - Set 3 =====
-      {
-        day: "Day 1",
-        round: "Round 1",
-        set: 3,
-        question:
-          "It is a majestic marble building built between 1906 and 1921. It was dedicated to the memory of the Empress of England of that time. It is also a symbol of love and culture.",
-        answer: "Victoria Memorial",
-      },
-      {
-        day: "Day 1",
-        round: "Round 1",
-        set: 3,
-        question:
-          "It is an iconic cantilever bridge connecting two cities. It is also named to honor the famous Bengali poet. It is one of the busiest bridges in the world standing on two main pillars.",
-        answer: "Howrah Bridge",
-      },
-      {
-        day: "Day 1",
-        round: "Round 1",
-        set: 3,
-        question:
-          "The oldest and the largest museum in India and Asia, housing an extensive collection of art, archeology and natural history exhibits. It was founded in 1814 at the cradle of the Asiatic Society of Bengal.",
-        answer: "Indian Museum",
-      },
-      {
-        day: "Day 1",
-        round: "Round 1",
-        set: 3,
-        question:
-          "A vibrant street known for its restaurants, cafes, and nightlife offering a mix of colonial-era buildings and modern establishments. In some specific festive seasons it transforms into a dazzling spectacle with vibrant decorations.",
-        answer: "Park Street",
-      },
-      {
-        day: "Day 1",
-        round: "Round 1",
-        set: 3,
-        question: "Which city was the capital of British India before Delhi?",
-        answer: "Kolkata",
-      },
-    ],
-  },
+const configCache = new Map();
+const userScoreCache = new Map(); // In-memory cache for quick score access
+const socketLastSeen = new Map(); // Track socket activity
 
-  2: {
-    name: "Round 2",
-    scoreMultiplier: 2,
-    questionTime: 40000, // 40 seconds
-    startTime: "00 12 * * *",
-    questions: [
-      // ===== Round 2 - Set 1 =====
-      {
-        day: "Day 2",
-        round: "Round 2",
-        set: 1,
-        question:
-          "In the UK, the book is known as 'Harry Potter and the Philosopher's Stone.' What was the U.S. title?",
-        answer: "Harry Potter and the Sorcerer’s Stone",
-      },
-      {
-        day: "Day 2",
-        round: "Round 2",
-        set: 1,
-        question:
-          "J.K. Rowling conceived the idea for a famous character while on a delayed train in 1990. Who was that character?",
-        answer: "Harry Potter",
-      },
-      {
-        day: "Day 2",
-        round: "Round 2",
-        set: 1,
-        question:
-          "The original UK cover art was illustrated by a 23-year-old English artist. Who was he?",
-        answer: "Thomas Taylor",
-      },
-      {
-        day: "Day 2",
-        round: "Round 2",
-        set: 1,
-        question:
-          "Which real historical figure, known for alchemy, appears as a character in the book?",
-        answer: "Nicolas Flamel",
-      },
-      {
-        day: "Day 2",
-        round: "Round 2",
-        set: 1,
-        question:
-          "This book sold over 120 million copies worldwide — what is its title?",
-        answer: "Harry Potter and the Sorcerer’s Stone",
-      },
+// Periodic cleanup to prevent memory leaks
+setInterval(() => {
+  const now = Date.now();
+  
+  // Clear inactive sockets (2 min idle)
+  for (const [id, time] of socketLastSeen) {
+    if (now - time > 120000) {
+      socketLastSeen.delete(id);
+    }
+  }
+  
+  // Soft garbage collection if available
+  if (global.gc) global.gc();
+}, 60000);
 
-      // ===== Round 2 - Set 2 =====
-      {
-        day: "Day 2",
-        round: "Round 2",
-        set: 2,
-        question:
-          "What is the term for a genre of ancient Indian texts that contain myths, legends, and historical narratives?",
-        answer: "Purana",
-      },
-      {
-        day: "Day 2",
-        round: "Round 2",
-        set: 2,
-        question:
-          "A thief who became a sage through chanting god's name — who is he?",
-        answer: "Valmiki",
-      },
-      {
-        day: "Day 2",
-        round: "Round 2",
-        set: 2,
-        question:
-          "Who is the greatest devotee of Lord Shiva known for intelligence and cunning?",
-        answer: "Ravan",
-      },
-      {
-        day: "Day 2",
-        round: "Round 2",
-        set: 2,
-        question:
-          "What is the tear-shaped island nation located south of India?",
-        answer: "Sri Lanka",
-      },
-      {
-        day: "Day 2",
-        round: "Round 2",
-        set: 2,
-        question:
-          "Which epic tells the story of Lord Rama and teaches duty and devotion?",
-        answer: "Ramayan",
-      },
+// ================= QUIZ STATE =================
 
-      // ===== Round 2 - Set 3 =====
-      {
-        day: "Day 2",
-        round: "Round 2",
-        set: 3,
-        question:
-          "They work with fabrics and garments using sewing machines. Who are they?",
-        answer: "Tailor",
-      },
-      {
-        day: "Day 2",
-        round: "Round 2",
-        set: 3,
-        question:
-          "This car was first introduced in India in 2005 and became a bestseller. Name it.",
-        answer: "Swift",
-      },
-      {
-        day: "Day 2",
-        round: "Round 2",
-        set: 3,
-        question:
-          "This area often refers to intergalactic or interstellar emptiness. What is it called?",
-        answer: "Blank Space",
-      },
-      {
-        day: "Day 2",
-        round: "Round 2",
-        set: 3,
-        question:
-          "The country bordered by Canada and Mexico, consisting of 50 states and Washington, D.C.?",
-        answer: "United States of America",
-      },
-      {
-        day: "Day 2",
-        round: "Round 2",
-        set: 3,
-        question:
-          "American singer-songwriter born in 1989, known for country and pop hits. Who is she?",
-        answer: "Taylor Swift",
-      },
-    ],
-  },
-
-  3: {
-    name: "Round 3",
-    scoreMultiplier: 3,
-    questionTime: 60000, // 60 seconds
-    startTime: "45 10 * * *",
-    questions: [
-      // ===== Round 3 - Set 1 =====
-      {
-        day: "Day 3",
-        round: "Round 3",
-        set: 1,
-        question: "Which country is known as 'The Land of the Rising Sun'?",
-        answer: "Japan",
-      },
-      {
-        day: "Day 3",
-        round: "Round 3",
-        set: 1,
-        question:
-          "An American singer, songwriter, dancer, and cultural icon who debuted at age six in 1964. Who is he?",
-        answer: "Michael Jackson",
-      },
-      {
-        day: "Day 3",
-        round: "Round 3",
-        set: 1,
-        question:
-          "A large fortified building serving as a royal residence in medieval times. What is it?",
-        answer: "Castle",
-      },
-      {
-        day: "Day 3",
-        round: "Round 3",
-        set: 1,
-        question:
-          "A supernatural malevolent being believed to influence humans — what is it called?",
-        answer: "Demon",
-      },
-      {
-        day: "Day 3",
-        round: "Round 3",
-        set: 1,
-        question:
-          "A warrior group from an anime hunting demons to avenge their family — name the anime.",
-        answer: "Demon Slayer",
-      },
-
-      // ===== Round 3 - Set 2 =====
-      {
-        day: "Day 3",
-        round: "Round 3",
-        set: 2,
-        question:
-          "What is the common nickname for a device used to lift heavy objects, especially vehicles?",
-        answer: "Jack",
-      },
-      {
-        day: "Day 3",
-        round: "Round 3",
-        set: 2,
-        question:
-          "What is the term for a large watercraft designed to transport people or goods?",
-        answer: "Ship",
-      },
-      {
-        day: "Day 3",
-        round: "Round 3",
-        set: 2,
-        question:
-          "What term describes a state of armed conflict between countries or groups?",
-        answer: "War",
-      },
-      {
-        day: "Day 3",
-        round: "Round 3",
-        set: 2,
-        question:
-          "What small, common bird known for chirping belongs to the family Passeridae?",
-        answer: "Sparrow",
-      },
-      {
-        day: "Day 3",
-        round: "Round 3",
-        set: 2,
-        question:
-          "Who is the witty pirate known for saying 'Why is the rum always gone?'",
-        answer: "Jack Sparrow",
-      },
-
-      // ===== Round 3 - Set 3 =====
-      {
-        day: "Day 3",
-        round: "Round 3",
-        set: 3,
-        question:
-          "An affectionate term for a rabbit, especially a young or cute one.",
-        answer: "Bunny",
-      },
-      {
-        day: "Day 3",
-        round: "Round 3",
-        set: 3,
-        question:
-          "The fibrous material that makes up tree trunks and branches.",
-        answer: "Wood",
-      },
-      {
-        day: "Day 3",
-        round: "Round 3",
-        set: 3,
-        question: "The reproductive structure of flowering plants.",
-        answer: "Flower",
-      },
-      {
-        day: "Day 3",
-        round: "Round 3",
-        set: 3,
-        question:
-          "A central character in the Mahabharata known for his archery skills and bravery.",
-        answer: "Arjun",
-      },
-      {
-        day: "Day 3",
-        round: "Round 3",
-        set: 3,
-        question:
-          "Which 2021 Telugu action-drama film revolves around red sandalwood smuggling?",
-        answer: "Pushpa",
-      },
-    ],
-  },
-
-  4: {
-    name: "Bonus Round",
-    scoreMultiplier: 5,
-    questionTime: 60000, // 60 seconds
-    startTime: "00 11 * * *",
-    questions: [
-      // ===== Bonus Round - Set 1 =====
-      {
-        day: "Day 4",
-        round: "Bonus Round",
-        set: 1,
-        question:
-          "I can recognize faces in your phone’s photo, and tell who is who wherever you go.",
-        answer: "Face Recognition",
-      },
-      {
-        day: "Day 4",
-        round: "Bonus Round",
-        set: 1,
-        question:
-          "I can translate words from one language to another, helping people understand one another.",
-        answer: "Translator",
-      },
-      {
-        day: "Day 4",
-        round: "Bonus Round",
-        set: 1,
-        question:
-          "I learn from data and get smarter each day, predicting things in a clever way.",
-        answer: "Machine Learning",
-      },
-      {
-        day: "Day 4",
-        round: "Bonus Round",
-        set: 1,
-        question:
-          "I can chat, answer questions, or tell you a joke — sometimes my answers make humans go 'whoa!'",
-        answer: "Chatbot",
-      },
-      {
-        day: "Day 4",
-        round: "Bonus Round",
-        set: 1,
-        question:
-          "I am the technology behind all these things, learning, predicting, and making life zing. What am I?",
-        answer: "AI",
-      },
-
-      // ===== Bonus Round - Set 2 =====
-      {
-        day: "Day 4",
-        round: "Bonus Round",
-        set: 2,
-        question:
-          "I am a delicious dish with cheese and tomato, everyone loves me, even the bravest bravado.",
-        answer: "Pizza",
-      },
-      {
-        day: "Day 4",
-        round: "Bonus Round",
-        set: 2,
-        question:
-          "I am a famous tower that leans to one side, tourists take photos here with pride.",
-        answer: "Leaning Tower of Pisa",
-      },
-      {
-        day: "Day 4",
-        round: "Bonus Round",
-        set: 2,
-        question:
-          "I am a city of canals and gondolas too, a romantic place where you can float through.",
-        answer: "Venice",
-      },
-      {
-        day: "Day 4",
-        round: "Bonus Round",
-        set: 2,
-        question:
-          "I am a city with the Colosseum tall, gladiators once fought within my walls.",
-        answer: "Rome",
-      },
-      {
-        day: "Day 4",
-        round: "Bonus Round",
-        set: 2,
-        question:
-          "I’m the country of pizza, towers, and art, with canals and ruins that capture the heart. Which country am I?",
-        answer: "Italy",
-      },
-    ],
-  },
-};
-
-// Current quiz state
 let currentRound = null;
 let currentQuestionIndex = 0;
-let currentQuestion = null;
 let quizActive = false;
-let connectedUsers = new Set();
+let questionTimer = null;
+let scheduledJobs = [];
 
-// Generic Quiz Starter
-const startQuiz = (roundNumber) => {
-  const config = QUIZ_CONFIG[roundNumber];
-  if (!config) {
-    console.error(`Round ${roundNumber} configuration not found`);
+// ================= HELPER FUNCTIONS =================
+
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function containsWord(sentence, word) {
+  if (!word || !sentence) return false;
+  const safeWord = escapeRegex(word.toLowerCase());
+  const regex = new RegExp(`\\b${safeWord}\\b`, "i");
+  return regex.test(sentence.toLowerCase());
+}
+
+async function getRoundConfig(round) {
+  if (configCache.has(round)) return configCache.get(round);
+  
+  const config = await RoundConfig.findOne({ round }).lean();
+  if (config) configCache.set(round, config);
+  
+  return config;
+}
+
+// ================= QUIZ FLOW =================
+
+async function startQuiz(round) {
+  // Prevent duplicate starts
+  if (quizActive && currentRound === round) {
+    console.log(`Quiz already running for Round ${round}`);
     return;
   }
 
-  currentRound = roundNumber;
+  // Clear existing timer
+  if (questionTimer) {
+    clearTimeout(questionTimer);
+    questionTimer = null;
+  }
+
+  const config = await getRoundConfig(round);
+  if (!config) {
+    console.error(`Round ${round} configuration not found`);
+    return;
+  }
+
+  quizActive = true;
+  currentRound = round;
   currentQuestionIndex = 0;
 
-  console.log(
-    `Starting ${config.name} with ${config.questions.length} questions`
-  );
+  // console.log(`Starting ${config.name} - Worker ${process.pid}`);
+  
+  sendQuestion(config);
+}
 
-  processNextQuestion(config);
-};
+async function sendQuestion(config) {
+  // Clear existing timer
+  if (questionTimer) {
+    clearTimeout(questionTimer);
+    questionTimer = null;
+  }
 
-const processNextQuestion = (config) => {
-  if (currentQuestionIndex >= config.questions.length) {
-    // Quiz ended
+  // Check if quiz complete
+  if (currentQuestionIndex >= config.totalQuestions) {
     io.emit("quiz-end", { round: currentRound });
-    currentQuestion = null;
     quizActive = false;
-    currentQuestionIndex = 0;
     currentRound = null;
+    currentQuestionIndex = 0;
+    console.log(`Quiz ended for ${config.name}`);
     return;
   }
 
-  currentQuestion = {
-    ...config.questions[currentQuestionIndex],
-    roundNumber: currentRound,
-    roundName: config.name,
-  };
-  quizActive = true;
+  try {
+    // Fetch single question (not all)
+    const question = await Question.findOne({
+      round: currentRound,
+      order: currentQuestionIndex
+    }).lean();
 
-  io.emit("question", {
-    ...currentQuestion,
-    index: currentQuestionIndex,
-    totalQuestions: config.questions.length,
-    round: currentRound,
-    roundName: config.name,
-    scoreMultiplier: config.scoreMultiplier,
-  });
-
-  setTimeout(() => {
-    currentQuestionIndex++;
-    if (currentQuestionIndex < config.questions.length) {
-      processNextQuestion(config);
-    } else {
-      io.emit("quiz-end", { round: currentRound });
-      currentQuestion = null;
-      quizActive = false;
-      currentQuestionIndex = 0;
-      currentRound = null;
+    if (!question) {
+      console.error(`Question not found: Round ${currentRound}, Index ${currentQuestionIndex}`);
+      return;
     }
-  }, config.questionTime);
-};
 
-// Socket.IO Connection Handler
+    // Emit to all clients
+    io.emit("question", {
+      question: question.question,
+      index: currentQuestionIndex,
+      round: currentRound,
+      roundName: config.name,
+      totalQuestions: config.totalQuestions,
+    });
+
+    console.log(`Sent Q${currentQuestionIndex + 1}/${config.totalQuestions} - ${config.name}`);
+
+    // Schedule next question
+    questionTimer = setTimeout(() => {
+      currentQuestionIndex++;
+      sendQuestion(config);
+    }, config.questionTime);
+
+  } catch (error) {
+    console.error("Error processing question:", error);
+    io.emit("quiz-end", { round: currentRound });
+    quizActive = false;
+    currentRound = null;
+    currentQuestionIndex = 0;
+  }
+}
+
+// ================= SOCKET HANDLER =================
+
 io.on("connection", (socket) => {
-  connectedUsers.add(socket.id);
+  socketLastSeen.set(socket.id, Date.now());
 
-  // Handle initial connection
-  socket.on("get-initial", () => {
-    if (currentQuestion !== null && quizActive) {
-      const config = QUIZ_CONFIG[currentRound];
-      socket.emit("question", {
-        ...currentQuestion,
-        index: currentQuestionIndex,
-        totalQuestions: config.questions.length,
-        round: currentRound,
-        roundName: config.name,
-        scoreMultiplier: config.scoreMultiplier,
-      });
-    }
+  // Heartbeat to track active connections
+  socket.on("heartbeat", () => {
+    socketLastSeen.set(socket.id, Date.now());
   });
 
-  socket.on("answer", async ({ answer, userId, questionIndex }) => {
+  // Send current state to new connections
+  socket.on("get-initial", async () => {
+    if (!quizActive) return;
+
+    const config = await getRoundConfig(currentRound);
+    
+    socket.emit("question", {
+      index: currentQuestionIndex,
+      round: currentRound,
+      roundName: config?.name || `Round ${currentRound}`,
+      totalQuestions: config?.totalQuestions || 0,
+    });
+  });
+
+  // ================= ANSWER SUBMISSION =================
+
+  socket.on("answer", async ({ userId, answer, questionIndex }) => {
     try {
-      // Validate input
+      // Validation
       if (!userId || typeof userId !== "string") {
-        socket.emit("error", { message: "Invalid userId" });
-        return;
+        return socket.emit("error", { message: "Invalid userId" });
       }
 
       if (!Array.isArray(answer) || answer.length !== 1) {
-        socket.emit("error", {
-          message: "Answer must be an array with exactly one element",
-        });
-        return;
+        return socket.emit("error", { message: "Answer must be an array with one element" });
       }
 
-      // Get current round questions and validate
-      if (!currentRound || !QUIZ_CONFIG[currentRound]) {
-        socket.emit("error", { message: "No active quiz round" });
-        return;
+      if (!quizActive || !currentRound) {
+        return socket.emit("error", { message: "No active quiz" });
       }
 
-      const config = QUIZ_CONFIG[currentRound];
-      const quiz = config.questions;
-
-      // Validate question index
-      if (questionIndex < 0 || questionIndex >= quiz.length) {
-        socket.emit("error", { message: "Invalid question index" });
-        return;
-      }
-
-      function containsWord(sentence, word) {
-        if (
-          !word ||
-          !sentence ||
-          word.trim() === "" ||
-          sentence.trim() === ""
-        ) {
-          return false;
-        }
-        // Convert both to lowercase for case-insensitive comparison
-        sentence = sentence.toLowerCase();
-        word = word.toLowerCase();
-
-        // Use RegExp to match exact word with word boundaries
-        const regex = new RegExp(`\\b${word}\\b`, "i");
-        return regex.test(sentence);
-      }
-
-      // === Handle Round Result First ===
-      let roundRecord = await roundResultModel.findOne({
-        userId,
+      // Fetch question
+      const config = await getRoundConfig(currentRound);
+      
+      const question = await Question.findOne({
         round: currentRound,
-      });
+        order: questionIndex
+      }).lean();
 
-      // Get the correct answer and user answer (first element of array)
-      let correctAnswer = quiz[questionIndex].answer.toLowerCase().trim();
-      let userAnswer = answer[0].toLowerCase().trim();
-      const result = containsWord(correctAnswer, userAnswer);
-
-      console.log("User Answer:", userAnswer);
-      console.log("Correct Answer:", correctAnswer);
-      console.log("Answer Check Result:", result);
-      console.log("Question Index:", questionIndex);
-
-      if (!roundRecord) {
-        // Create new round record
-        let roundScore = 0;
-
-        // Award points if answer is correct
-        if (result) {
-          roundScore += config.scoreMultiplier;
-        }
-
-        console.log("Creating new round record with score:", roundScore);
-
-        roundRecord = new roundResultModel({
-          userId,
-          round: currentRound,
-          score: roundScore,
-          attemptedQuestions: [questionIndex],
-        });
-      } else {
-        // Update existing round record
-        console.log("Existing round record found");
-        console.log("Current score before update:", roundRecord.score);
-        console.log(
-          "Current attempted questions:",
-          roundRecord.attemptedQuestions
-        );
-
-        // Check if question already attempted to prevent duplicates
-        if (!roundRecord.attemptedQuestions.includes(questionIndex)) {
-          // Award points if answer is correct
-          if (result) {
-            roundRecord.score += config.scoreMultiplier;
-          }
-          roundRecord.attemptedQuestions.push(questionIndex);
-          console.log("Added new question to attempted list");
-        } else {
-          console.log("Question already attempted, no score change");
-          // Don't add additional points for duplicate attempts
-        }
+      if (!question) {
+        return socket.emit("error", { message: "Invalid question" });
       }
 
-      await roundRecord.save();
+      // Check answer
+      const correctAnswer = question.answer.toLowerCase().trim();
+      const userAnswer = answer[0].toLowerCase().trim();
+      const isCorrect = containsWord(correctAnswer, userAnswer);
 
-      console.log("Final round score:", roundRecord.score);
-      console.log("Final attempted questions:", roundRecord.attemptedQuestions);
+      // ===== IN-MEMORY SCORE CACHE (Fast Response) =====
+      
+      let cached = userScoreCache.get(userId) || {
+        totalScore: 0,
+        attempted: 0,
+        rounds: new Set()
+      };
 
-      // === Handle Total Quiz Result ===
-      let record = await quizResultModel.findOne({ userId });
-
-      if (!record) {
-        // Create new total record by calculating from all rounds
-        const allRounds = await roundResultModel.find({ userId });
-        const totalScore = allRounds.reduce((sum, r) => sum + r.score, 0);
-        const totalAttempted = allRounds.reduce(
-          (sum, r) => sum + r.attemptedQuestions.length,
-          0
-        );
-
-        record = new quizResultModel({
-          userId,
-          totalScore: totalScore,
-          totalAttemptedQuestions: totalAttempted,
-          roundsCompleted: [currentRound],
-        });
-      } else {
-        // Update total record by recalculating from all rounds
-        const allRounds = await roundResultModel.find({ userId });
-        record.totalScore = allRounds.reduce((sum, r) => sum + r.score, 0);
-        record.totalAttemptedQuestions = allRounds.reduce(
-          (sum, r) => sum + r.attemptedQuestions.length,
-          0
-        );
-
-        // Add current round to completed rounds if not already there
-        if (!record.roundsCompleted.includes(currentRound)) {
-          record.roundsCompleted.push(currentRound);
-        }
+      if (isCorrect) {
+        cached.totalScore += config.scoreMultiplier;
       }
 
-      await record.save();
+      cached.attempted++;
+      cached.rounds.add(currentRound);
+      
+      userScoreCache.set(userId, cached);
 
-      console.log(
-        "Sending score update - Total:",
-        record.totalScore,
-        "Round:",
-        roundRecord.score
-      );
+      // ===== REDIS LEADERBOARD (Async, Non-Blocking) =====
+      
+      if (isCorrect) {
+        pubClient.zincrby("leaderboard", config.scoreMultiplier, userId).catch(err => {
+          console.error("Redis leaderboard update failed:", err);
+        });
+      }
 
+      // ===== RESPOND IMMEDIATELY (Don't wait for DB) =====
+      
       socket.emit("score-update", {
-        totalScore: record.totalScore,
-        roundScore: roundRecord.score,
+        isCorrect,
+        totalScore: cached.totalScore,
+        roundScore: cached.totalScore, // Simplified
         currentRound: currentRound,
-        roundAttempted: roundRecord.attemptedQuestions.length,
-        isCorrect: result,
-        correctAnswer: quiz[questionIndex].answer,
+        correctAnswer: question.answer,
       });
+
+      // ===== DATABASE UPDATE (Async, Background) =====
+      
+      setImmediate(async () => {
+        try {
+          const userObjId = new mongoose.Types.ObjectId(userId);
+          
+          // Update round result
+          let roundUpdate = await roundResultModel.findOne({
+            userId: userObjId,
+            round: currentRound
+          });
+
+          if (!roundUpdate) {
+            try {
+              roundUpdate = await roundResultModel.create({
+                userId: userObjId,
+                round: currentRound,
+                score: isCorrect ? config.scoreMultiplier : 0,
+                attemptedQuestions: [questionIndex]
+              });
+            } catch (createError) {
+              if (createError.code === 11000) {
+                roundUpdate = await roundResultModel.findOne({
+                  userId: userObjId,
+                  round: currentRound
+                });
+              }
+            }
+          } else if (!roundUpdate.attemptedQuestions.includes(questionIndex)) {
+            if (isCorrect) roundUpdate.score += config.scoreMultiplier;
+            roundUpdate.attemptedQuestions.push(questionIndex);
+            await roundUpdate.save();
+          }
+
+          // Update total score
+          const allRounds = await roundResultModel.find({ userId: userObjId }).lean();
+          
+          let totalScore = 0;
+          let totalAttempted = 0;
+          let roundsCompleted = [];
+
+          allRounds.forEach(r => {
+            totalScore += r.score || 0;
+            totalAttempted += r.attemptedQuestions?.length || 0;
+            if (!roundsCompleted.includes(r.round)) {
+              roundsCompleted.push(r.round);
+            }
+          });
+
+          await quizResultModel.findOneAndUpdate(
+            { userId: userObjId },
+            { totalScore, totalAttemptedQuestions: totalAttempted, roundsCompleted },
+            { upsert: true }
+          );
+
+        } catch (dbErr) {
+          console.error("Background DB update failed:", dbErr);
+        }
+      });
+
     } catch (err) {
-      console.error("Score update error:", err);
-      socket.emit("error", { message: "Failed to update score" });
+      console.error("Answer processing error:", err);
+      socket.emit("error", { message: "Failed to process answer" });
     }
   });
 
-  socket.on("quit-quiz", () => {
-    connectedUsers.delete(socket.id);
-  });
-
   socket.on("disconnect", () => {
-    connectedUsers.delete(socket.id);
+    socketLastSeen.delete(socket.id);
   });
 });
 
-// MongoDB Connection
-mongoose
-  .connect(process.env.MONGODB_URI, {
-    serverSelectionTimeoutMS: 10000, // 10 seconds timeout
-  })
-  .then(() => console.log("✅ Connected to MongoDB Atlas"))
-  .catch((err) => console.error("❌ MongoDB connection error:", err));
+// ================= EXPRESS ROUTES =================
 
-mongoose.set("debug", true);
-
-app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
-app.use(cookieParser());
-
-// Authentication Routes
 app.post("/register", async (req, res) => {
   try {
-    let { email, username, password } = req.body;
-    let existingUser = await userModel.findOne({ email });
-    if (existingUser) return res.status(400).send("User already registered");
+    const { email, username, password } = req.body;
+    
+    const existingUser = await userModel.findOne({ email }).lean();
+    if (existingUser) {
+      return res.status(400).send("User already registered");
+    }
 
-    let salt = await bcrypt.genSalt(10);
-    let hashedPassword = await bcrypt.hash(password, salt);
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-    let user = await userModel.create({
+    const user = await userModel.create({
       username,
       email,
       password: hashedPassword,
     });
-    let token = jwt.sign(
+
+    const token = jwt.encode(
       { email: user.email, id: user._id, username: user.username },
       JWT_SECRET
     );
@@ -818,6 +418,7 @@ app.post("/register", async (req, res) => {
       sameSite: "none",
       secure: true,
     });
+    
     res.send("Registered successfully");
   } catch (err) {
     console.error("Registration error:", err);
@@ -827,22 +428,29 @@ app.post("/register", async (req, res) => {
 
 app.post("/login", async (req, res) => {
   try {
-    let { username, password } = req.body;
-    let user = await userModel.findOne({ username });
-    if (!user) return res.status(400).send("User not found");
+    const { username, password } = req.body;
+    
+    const user = await userModel.findOne({ username }).lean();
+    if (!user) {
+      return res.status(400).send("User not found");
+    }
 
-    let isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).send("Incorrect password");
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).send("Incorrect password");
+    }
 
-    let token = jwt.sign(
+    const token = jwt.encode(
       { email: user.email, id: user._id, username: user.username },
       JWT_SECRET
     );
+
     res.cookie("token", token, {
       httpOnly: true,
       sameSite: "none",
       secure: true,
     });
+    
     res.status(200).send("Login successful");
   } catch (err) {
     console.error("Login error:", err);
@@ -851,11 +459,11 @@ app.post("/login", async (req, res) => {
 });
 
 app.get("/auth/status", (req, res) => {
-  let token = req.cookies.token;
+  const token = req.cookies.token;
   if (!token) return res.json({ loggedIn: false });
 
   try {
-    let user = jwt.verify(token, JWT_SECRET);
+    const user = jwt.decode(token, JWT_SECRET);
     res.json({ loggedIn: true, user });
   } catch {
     res.json({ loggedIn: false });
@@ -871,61 +479,67 @@ app.get("/logout", (req, res) => {
   res.status(200).send("Logged out successfully");
 });
 
-// Leaderboard Route
+// ===== LEADERBOARD (Redis-First, DB Fallback) =====
+
 app.get("/leaderboard", async (req, res) => {
   try {
+    // Use DB directly - most reliable for leaderboard
     const results = await quizResultModel
       .find()
       .sort({ totalScore: -1, createdAt: 1 })
       .populate("userId", "username email")
-      .limit(100);
+      .limit(100)
+      .lean();
 
-    res.json(results);
+    // Format response to match expected structure
+    const formattedResults = results.map(result => ({
+      _id: result._id,
+      userId: result.userId || { username: "Unknown User", email: "" },
+      totalScore: result.totalScore || 0
+    }));
+
+    res.json(formattedResults);
   } catch (err) {
     console.error("Leaderboard fetch error:", err);
-    res.status(500).send("Failed to fetch leaderboard");
+    res.status(500).json([]);
   }
 });
 
-// User Score Route
 app.get("/get-user-score/", async (req, res) => {
-  const round = req.query.round;
   try {
     const token = req.cookies.token;
-    const requestedRound = round ? parseInt(round) : null;
+    const requestedRound = req.query.round ? parseInt(req.query.round) : null;
 
     if (!token) {
       return res.status(401).json({ message: "Not authenticated" });
     }
 
-    const user = jwt.verify(token, JWT_SECRET);
+    const user = jwt.decode(token, JWT_SECRET);
 
     if (requestedRound) {
-      // Get specific round data
       const roundScore = await roundResultModel.findOne({
         userId: user.id,
         round: requestedRound,
-      });
+      }).lean();
 
-      const config = QUIZ_CONFIG[requestedRound];
+      const config = await getRoundConfig(requestedRound);
 
       res.json({
         round: requestedRound,
         roundName: config?.name || `Round ${requestedRound}`,
         score: roundScore?.score || 0,
-        totalQuestions: config?.questions?.length || 0,
+        totalQuestions: config?.totalQuestions || 0,
         questionAttempt: roundScore?.attemptedQuestions?.length || 0,
         scoreMultiplier: config?.scoreMultiplier || 1,
       });
     } else {
-      // Get total data
-      const totalRecord = await quizResultModel.findOne({ userId: user.id });
+      const totalRecord = await quizResultModel.findOne({ userId: user.id }).lean();
 
       res.json({
         totalScore: totalRecord?.totalScore || 0,
         totalAttempted: totalRecord?.totalAttemptedQuestions || 0,
         roundsCompleted: totalRecord?.roundsCompleted || [],
-        totalRounds: Object.keys(QUIZ_CONFIG).length,
+        totalRounds: configCache.size,
       });
     }
   } catch (err) {
@@ -934,19 +548,21 @@ app.get("/get-user-score/", async (req, res) => {
   }
 });
 
-// Round Results Route
 app.get("/round-results/:round", async (req, res) => {
   try {
     const round = parseInt(req.params.round);
+    const config = await getRoundConfig(round);
+    
     const results = await roundResultModel
       .find({ round })
       .sort({ score: -1, createdAt: 1 })
       .populate("userId", "username email")
-      .limit(10);
+      .limit(10)
+      .lean();
 
     res.json({
       round,
-      roundName: QUIZ_CONFIG[round]?.name || `Round ${round}`,
+      roundName: config?.name || `Round ${round}`,
       results,
     });
   } catch (err) {
@@ -955,79 +571,74 @@ app.get("/round-results/:round", async (req, res) => {
   }
 });
 
-// // Start Quiz Manually (for testing)
-// app.post("/start-quiz/:round", (req, res) => {
-//   const round = parseInt(req.params.round);
-//   if (QUIZ_CONFIG[round]) {
-//     startQuiz(round);
-//     res.json({ message: `${QUIZ_CONFIG[round].name} started successfully` });
-//   } else {
-//     res.status(400).json({ error: "Invalid round number" });
-//   }
-// });
-// // Schedule All Rounds
-// Object.keys(QUIZ_CONFIG).forEach((roundNumber) => {
-//   const config = QUIZ_CONFIG[roundNumber];
-//   cron.schedule(config.startTime, () => {
-//     console.log(`Auto-starting ${config.name}`);
-//     startQuiz(parseInt(roundNumber));
-//   });
-// });
+// ================= MONGO CONNECTION =================
 
-// Server Start
-// Manual Quiz Start (For Testing)
-app.post("/start-quiz/:round", (req, res) => {
-  try {
-    const round = parseInt(req.params.round);
+mongoose.connect(process.env.MONGODB_URI, {
+  maxPoolSize: 20,
+  minPoolSize: 5,
+  socketTimeoutMS: 45000,
+  maxIdleTimeMS: 30000,
+  compressors: ['zlib'],
+}).then(async () => {
+  console.log(`✅ MongoDB Connected - Worker ${process.pid}`);
+  
+  // Load configs into cache
+  const configs = await RoundConfig.find().lean();
+  configs.forEach(config => {
+    configCache.set(config.round, config);
+  });
+  
+  // Schedule quizzes
+  scheduleQuizzes();
+  
+}).catch((err) => console.error("❌ MongoDB connection error:", err));
 
-    if (!QUIZ_CONFIG[round]) {
-      return res.status(400).json({ error: "Invalid round number" });
-    }
+// ================= QUIZ SCHEDULING =================
 
-    console.log(
-      `[Manual Start] Starting quiz for Round ${round} at ${moment()
-        .tz("Asia/Kolkata")
-        .format("YYYY-MM-DD HH:mm:ss")} IST`
+async function scheduleQuizzes() {
+  scheduledJobs.forEach(job => job.stop());
+  scheduledJobs = [];
+
+  const configs = await RoundConfig.find().lean();
+  
+  configs.forEach((config) => {
+    const job = cron.schedule(
+      config.startTime,
+      () => {
+        // console.log(`[Auto Start] ${config.name}`);
+        startQuiz(config.round);
+      },
+      { timezone: "Asia/Kolkata" }
     );
-    startQuiz(round);
 
-    res.json({
-      message: `${QUIZ_CONFIG[round].name} started successfully (manual trigger)`,
+    scheduledJobs.push(job);
+    console.log(`✅ Scheduled ${config.name} - ${config.startTime}`);
+  });
+}
+
+// ================= GRACEFUL SHUTDOWN =================
+
+process.on("SIGTERM", async () => {
+  console.log(`Worker ${process.pid} shutting down...`);
+  
+  if (questionTimer) clearTimeout(questionTimer);
+  scheduledJobs.forEach(job => job.stop());
+  
+  await pubClient.quit();
+  await subClient.quit();
+
+  server.close(() => {
+    mongoose.connection.close(false, () => {
+      console.log("MongoDB connection closed");
+      process.exit(0);
     });
-  } catch (err) {
-    console.error("Error starting quiz manually:", err);
-    res.status(500).json({ error: "Failed to start quiz" });
-  }
+  });
 });
 
-// Auto-Schedule All Rounds (IST Timezone)
-Object.keys(QUIZ_CONFIG).forEach((roundNumber) => {
-  const config = QUIZ_CONFIG[roundNumber];
-  const { startTime } = config; // e.g. "0 10 * * *" for 10:00 AM
+// ================= START SERVER =================
 
-  // Ensure correct timezone
-  cron.schedule(
-    startTime,
-    () => {
-      console.log(
-        `[Auto Start] Starting ${
-          config.name
-        } (Round ${roundNumber}) at ${moment()
-          .tz("Asia/Kolkata")
-          .format("YYYY-MM-DD HH:mm:ss")} IST`
-      );
-      startQuiz(parseInt(roundNumber));
-    },
-    {
-      scheduled: true,
-      timezone: "Asia/Kolkata",
-    }
-  );
-  console.log(
-    `✅ Scheduled ${config.name} at ${startTime} (Asia/Kolkata Time)`
-  );
-});
+const PORT = process.env.PORT || 5000;
 
-server.listen(process.env.PORT || 5000, () => {
-  console.log("Server running on https://nexus-verve.onrender.com");
+server.listen(PORT, () => {
+  // console.log(`✅ Worker ${process.pid} listening on port ${PORT}`);
 });

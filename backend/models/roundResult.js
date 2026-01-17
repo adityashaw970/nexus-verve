@@ -20,8 +20,8 @@ const roundResultSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
-// ✅ Add unique compound index (to prevent duplicate rounds per user)
+// Compound index for user+round uniqueness and fast queries
 roundResultSchema.index({ userId: 1, round: 1 }, { unique: true });
+roundResultSchema.index({ round: 1, score: -1 }); // For leaderboards
 
-// ✅ Prevent OverwriteModelError on hot-reload
 module.exports = mongoose.models.roundResult || mongoose.model("roundResult", roundResultSchema);

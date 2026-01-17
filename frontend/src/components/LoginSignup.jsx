@@ -10,6 +10,8 @@ export default function Login() {
   const signUpEmailRef = useRef(null);
   const signUpPasswordRef = useRef(null);
 
+  const API_URL = "http://localhost:5000";
+
   const InputField = ({ label, type, name, inputRef }) => (
     <div className="relative z-0 w-full mb-6 group">
       <input
@@ -31,13 +33,13 @@ export default function Login() {
 
   useEffect(() => {
     const checkLoggedIn = async () => {
-      const res = await fetch("https://nexus-verve.onrender.com/auth/status", {
+      const res = await fetch(`${API_URL}/auth/status`, {
         method: "GET",
         credentials: "include",
       });
       const msg = await res.json();
 
-      if (window.location.href === "http://localhost:5173/login") {
+      if (window.location.href === `${API_URL}/login`) {
         if (msg.loggedIn) {
           window.location.href = "/profile";
         }
@@ -52,7 +54,7 @@ export default function Login() {
     const username = loginUsernameRef.current.value.trim();
     const password = loginPasswordRef.current.value.trim();
     try {
-      const res = await fetch("https://nexus-verve.onrender.com/login", {
+      const res = await fetch(`${API_URL}/login`, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -79,7 +81,7 @@ export default function Login() {
     const email = signUpEmailRef.current.value.trim();
     const password = signUpPasswordRef.current.value.trim();
     try {
-      const res = await fetch("https://nexus-verve.onrender.com/register", {
+      const res = await fetch(`${API_URL}/register`, {
         method: "POST",
         credentials: "include",
         headers: {

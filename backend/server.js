@@ -216,7 +216,7 @@ async function sendQuestion(config) {
     }, config.questionTime);
 
   } catch (error) {
-    // console.error("Error processing question:", error);
+    console.error("Error processing question:", error);
     io.emit("quiz-end", { round: currentRound });
     quizActive = false;
     currentRound = null;
@@ -303,7 +303,7 @@ io.on("connection", (socket) => {
       
       if (isCorrect) {
         pubClient.zincrby("leaderboard", config.scoreMultiplier, userId).catch(err => {
-          // console.error("Redis leaderboard update failed:", err);
+          console.error("Redis leaderboard update failed:", err);
         });
       }
 
@@ -373,12 +373,12 @@ io.on("connection", (socket) => {
           );
 
         } catch (dbErr) {
-          // console.error("Background DB update failed:", dbErr);
+          console.error("Background DB update failed:", dbErr);
         }
       });
 
     } catch (err) {
-      // console.error("Answer processing error:", err);
+      console.error("Answer processing error:", err);
       socket.emit("error", { message: "Failed to process answer" });
     }
   });
@@ -421,7 +421,7 @@ app.post("/register", async (req, res) => {
     
     res.send("Registered successfully");
   } catch (err) {
-    // console.error("Registration error:", err);
+    console.error("Registration error:", err);
     res.status(500).send("Registration failed");
   }
 });
@@ -453,7 +453,7 @@ app.post("/login", async (req, res) => {
     
     res.status(200).send("Login successful");
   } catch (err) {
-    // console.error("Login error:", err);
+    console.error("Login error:", err);
     res.status(500).send("Login failed");
   }
 });
@@ -500,7 +500,7 @@ app.get("/leaderboard", async (req, res) => {
 
     res.json(formattedResults);
   } catch (err) {
-    // console.error("Leaderboard fetch error:", err);
+    console.error("Leaderboard fetch error:", err);
     res.status(500).json([]);
   }
 });
@@ -543,7 +543,7 @@ app.get("/get-user-score/", async (req, res) => {
       });
     }
   } catch (err) {
-    // console.error("Get user score error:", err);
+    console.error("Get user score error:", err);
     res.status(500).json({ error: "Failed to fetch score" });
   }
 });
@@ -566,7 +566,7 @@ app.get("/round-results/:round", async (req, res) => {
       results,
     });
   } catch (err) {
-    // console.error("Round results fetch error:", err);
+    console.error("Round results fetch error:", err);
     res.status(500).send("Failed to fetch round results");
   }
 });

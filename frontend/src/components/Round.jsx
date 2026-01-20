@@ -20,7 +20,7 @@ const Round = () => {
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(30);
+  const [timeLeft, setTimeLeft] = useState(45);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [roundScore, setRoundScore] = useState(0);
   const [totalScore, setTotalScore] = useState(0);
@@ -32,7 +32,7 @@ const Round = () => {
   const [currentRound, setCurrentRound] = useState(1);
   const [roundName, setRoundName] = useState("Round 1");
   const [scoreMultiplier, setScoreMultiplier] = useState(1);
-  const [questionTime, setQuestionTime] = useState(30);
+  const [questionTime, setQuestionTime] = useState(45);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState(null);
 
@@ -128,27 +128,27 @@ const Round = () => {
         {
           order: 0,
           question:
-            "In the UK, the book is known as 'Harry Potter and the Philosopher's Stone.' What was the U.S. title?",
+            "I can recognize faces in your phone's photo, and tell who is who wherever you go.",
         },
         {
           order: 1,
           question:
-            "J.K. Rowling conceived the idea for a famous character while on a delayed train in 1990. Who was that character?",
+            "I can translate words from one language to another, helping people understand one another.",
         },
         {
           order: 2,
           question:
-            "The original UK cover art was illustrated by a 23-year-old English artist. Who was he?",
+            "I learn from data and get smarter each day, predicting things in a clever way.",
         },
         {
           order: 3,
           question:
-            "Which real historical figure, known for alchemy, appears as a character in the book?",
+            "I can chat, answer questions, or tell you a joke — sometimes my answers make humans go 'whoa!",
         },
         {
           order: 4,
           question:
-            "This book sold over 120 million copies worldwide — what is its title?",
+            "I am the technology behind all these things, learning, predicting, and making life zing. What am I?",
         },
       ],
       2: [
@@ -211,27 +211,28 @@ const Round = () => {
       1: [
         {
           order: 0,
-          question: "Which country is known as 'The Land of the Rising Sun'?",
+          question:
+            "I am a delicious dish with cheese and tomato, everyone loves me, even the bravest bravado.?",
         },
         {
           order: 1,
           question:
-            "An American singer, songwriter, dancer, and cultural icon who debuted at age six in 1964. Who is he?",
+            "I am a famous tower that leans to one side, tourists take photos here with pride",
         },
         {
           order: 2,
           question:
-            "A large fortified building serving as a royal residence in medieval times. What is it?",
+            "I am a city of canals and gondolas too, a romantic place where you can float through.",
         },
         {
           order: 3,
           question:
-            "A supernatural malevolent being believed to influence humans — what is it called?",
+            "I am a city with the Colosseum tall, gladiators once fought within my walls.",
         },
         {
           order: 4,
           question:
-            "A warrior group from an anime hunting demons to avenge their family — name the anime.",
+            "I'm the country of pizza, towers, and art, with canals and ruins that capture the heart. Which country am I?",
         },
       ],
       2: [
@@ -294,54 +295,24 @@ const Round = () => {
         {
           order: 0,
           question:
-            "I can recognize faces in your phone's photo, and tell who is who wherever you go.",
+            "It is related to cinema hall.We say it in it's English name.",
         },
         {
           order: 1,
-          question:
-            "I can translate words from one language to another, helping people understand one another.",
+          question: "It is not a food. It can be of different types.",
         },
         {
           order: 2,
-          question:
-            "I learn from data and get smarter each day, predicting things in a clever way.",
+          question: "After watching the movie it is of no use.",
         },
         {
           order: 3,
           question:
-            "I can chat, answer questions, or tell you a joke — sometimes my answers make humans go 'whoa!'",
+            "While entering the hall many people carry it in their hand.",
         },
         {
           order: 4,
-          question:
-            "I am the technology behind all these things, learning, predicting, and making life zing. What am I?",
-        },
-      ],
-      2: [
-        {
-          order: 5,
-          question:
-            "I am a delicious dish with cheese and tomato, everyone loves me, even the bravest bravado.",
-        },
-        {
-          order: 6,
-          question:
-            "I am a famous tower that leans to one side, tourists take photos here with pride.",
-        },
-        {
-          order: 7,
-          question:
-            "I am a city of canals and gondolas too, a romantic place where you can float through.",
-        },
-        {
-          order: 8,
-          question:
-            "I am a city with the Colosseum tall, gladiators once fought within my walls.",
-        },
-        {
-          order: 9,
-          question:
-            "I'm the country of pizza, towers, and art, with canals and ruins that capture the heart. Which country am I?",
+          question: "We use this to see 3D films.",
         },
       ],
     },
@@ -441,9 +412,9 @@ const Round = () => {
           // Determine question time
           const timeForQuestion =
             questionData.round === 1
-              ? 30
+              ? 45
               : questionData.round === 2
-                ? 40
+                ? 60
                 : questionData.round === 3
                   ? 60
                   : questionData.round === 4
@@ -505,6 +476,54 @@ const Round = () => {
 
     checkLoggedIn();
   }, []); // Run once on mount
+
+  // ========== ENSURE FULLSCREEN ON ROUND START ==========
+  useEffect(() => {
+    const ensureFullscreen = () => {
+      if (!document.fullscreenElement) {
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch((err) => {
+            console.log("Auto-fullscreen failed:", err);
+          });
+        } else if (document.documentElement.webkitRequestFullscreen) {
+          document.documentElement.webkitRequestFullscreen();
+        } else if (document.documentElement.msRequestFullscreen) {
+          document.documentElement.msRequestFullscreen();
+        }
+      }
+    };
+
+    // Try to go fullscreen when component mounts
+    ensureFullscreen();
+
+    // Re-enable fullscreen if user exits during quiz
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && isQuizActive && currentQuestion) {
+        // User exited fullscreen during active quiz
+        setTimeout(() => {
+          alert("⚠️ Please stay in fullscreen mode during the quiz!");
+          ensureFullscreen();
+        }, 500);
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("msfullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        handleFullscreenChange,
+      );
+      document.removeEventListener(
+        "msfullscreenchange",
+        handleFullscreenChange,
+      );
+    };
+  }, [isQuizActive]);
+
   // ========== FETCH ROUND DATA FROM BACKEND (NO LOCALSTORAGE FALLBACK) ==========
   const fetchCurrentRoundData = async (round) => {
     try {
@@ -549,7 +568,7 @@ const Round = () => {
       const startTime = questionData.startTime || Date.now();
       const duration =
         questionData.duration ||
-        (questionData.round === 1 ? 30 : questionData.round === 2 ? 40 : 60);
+        (questionData.round === 1 ? 45 : questionData.round === 2 ? 60 : 60);
 
       // ✅ Clear old URL params first
       const url = new URL(window.location);
@@ -584,9 +603,9 @@ const Round = () => {
       // Set question time based on round configuration
       const timeForQuestion =
         questionData.round === 1
-          ? 30
+          ? 45
           : questionData.round === 2
-            ? 40
+            ? 60
             : questionData.round === 3
               ? 60
               : questionData.round === 4
@@ -758,7 +777,11 @@ const Round = () => {
   };
 
   // ========== HANDLE QUIT ==========
+  // ========== HANDLE QUIT ==========
   const handleQuit = async () => {
+    // Temporarily disable tab switch detection during quit process
+    setIsQuizActive(false);
+
     if (
       window.confirm(
         "Are you sure you want to quit the quiz? Your current progress will be saved and you'll see your results.",
@@ -787,6 +810,9 @@ const Round = () => {
         console.error("Error during quit:", error);
         window.location.href = `/score?round=${currentRound}`;
       }
+    } else {
+      // User cancelled quit - re-enable quiz
+      setIsQuizActive(true);
     }
   };
 
@@ -863,68 +889,96 @@ const Round = () => {
 
   const { setNumber, questionInSet } = getCurrentSet();
 
-  // ========== TAB SWITCH DETECTION ==========
+  // ========== TAB SWITCH & ALT+TAB DETECTION ==========
   useEffect(() => {
+    let altPressed = false;
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Alt") {
+        altPressed = true;
+      }
+
+      // Detect Alt+Tab (only if quiz is active)
+      if (
+        altPressed &&
+        e.key === "Tab" &&
+        isQuizActive &&
+        currentQuestion &&
+        !isSubmitted
+      ) {
+        e.preventDefault();
+        handleTabSwitch("Alt+Tab detected");
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (e.key === "Alt") {
+        altPressed = false;
+      }
+    };
+
     const handleVisibilityChange = () => {
       if (document.hidden && isQuizActive && currentQuestion && !isSubmitted) {
-        // User switched away from tab during active quiz
-        const newCount = tabSwitchCount + 1;
-        setTabSwitchCount(newCount);
+        handleTabSwitch("Tab switch detected");
+      }
+    };
 
-        console.warn(
-          `⚠️ Tab switch detected! Count: ${newCount}/${MAX_TAB_SWITCHES}`,
+    const handleBlur = () => {
+      // Only trigger if quiz is active AND not submitted
+      if (isQuizActive && currentQuestion && !isSubmitted) {
+        handleTabSwitch("Window focus lost");
+      }
+    };
+
+    const handleTabSwitch = (reason) => {
+      const newCount = tabSwitchCount + 1;
+      setTabSwitchCount(newCount);
+
+      console.warn(`⚠️ ${reason}! Count: ${newCount}/${MAX_TAB_SWITCHES}`);
+
+      if (newCount >= MAX_TAB_SWITCHES) {
+        alert(
+          `You have switched tabs ${MAX_TAB_SWITCHES} times. Quiz terminated.`,
         );
 
-        if (newCount >= MAX_TAB_SWITCHES) {
-          // Auto-submit current answer and redirect
-          alert(
-            `You have switched tabs ${MAX_TAB_SWITCHES} times. Quiz terminated.`,
-          );
-
-          // Submit current answer if exists
-          const currentAnswer = userAnswers[currentIndex] || "";
-          if (currentAnswer.trim()) {
-            fetch(`${API_URL}/auth/status`, { credentials: "include" })
-              .then((res) => res.json())
-              .then((data) => {
-                if (data.loggedIn) {
-                  socket.emit("answer", {
-                    answer: [currentAnswer.trim()],
-                    userId: data.user.id,
-                    questionIndex: currentQuestion?.index || currentIndex,
-                  });
-                }
-              })
-              .catch((err) => console.error(err));
-          }
-
-          // Redirect to score page
-          setTimeout(() => {
-            window.location.href = `/score?round=${currentRound}&reason=tab-switch`;
-          }, 1000);
-        } else {
-          // Warning for remaining switches
-          alert(
-            `Warning: Tab switching detected! ${MAX_TAB_SWITCHES - newCount} switches remaining before termination.`,
-          );
+        const currentAnswer = userAnswers[currentIndex] || "";
+        if (currentAnswer.trim()) {
+          fetch(`${API_URL}/auth/status`, { credentials: "include" })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.loggedIn) {
+                socket.emit("answer", {
+                  answer: [currentAnswer.trim()],
+                  userId: data.user.id,
+                  questionIndex: currentQuestion?.index || currentIndex,
+                });
+              }
+            })
+            .catch((err) => console.error(err));
         }
+
+        setTimeout(() => {
+          window.location.href = `/score?round=${currentRound}`;
+        }, 1000);
+      } else {
+        alert(
+          `⚠️ Warning: ${reason}!\n${MAX_TAB_SWITCHES - newCount} violations remaining before quiz termination.`,
+        );
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleBlur);
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keyup", handleKeyUp);
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleBlur);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keyup", handleKeyUp);
     };
-  }, [
-    isQuizActive,
-    currentQuestion,
-    isSubmitted,
-    tabSwitchCount,
-    userAnswers,
-    currentIndex,
-    currentRound,
-  ]);
+  }, [isQuizActive, isSubmitted, currentQuestion, tabSwitchCount]); // Added currentQuestion dependency
 
   return (
     <div className="font-[GilM] flex flex-col items-center justify-center min-h-screen bg-black text-white overflow-hidden relative">
@@ -948,7 +1002,32 @@ const Round = () => {
           </div>
         </div>
       )}
-
+      <div className="flex gap-4 font-[GilM] flex flex-col items-center justify-center min-h-screen bg-black text-white overflow-hidden absolute">
+        <button
+          onClick={() => {
+            if (document.fullscreenElement) {
+              if (document.exitFullscreen) {
+                document.exitFullscreen();
+              } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+              } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+              }
+            } else {
+              if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen();
+              } else if (document.documentElement.webkitRequestFullscreen) {
+                document.documentElement.webkitRequestFullscreen();
+              } else if (document.documentElement.msRequestFullscreen) {
+                document.documentElement.msRequestFullscreen();
+              }
+            }
+          }}
+          className="bg-blue-500/70 hover:bg-blue-500 text-white lg:px-4 lg:py-3 px-4 py-3 rounded-2xl border border-blue-500/30 transition-all duration-300 text-[2.5vh] lg:text-sm font-medium backdrop-blur-sm hover:scale-105 transform fixed top-4 left-4 z-50 backdrop-blur-md px-6 py-3 rounded-2xl border  shadow-lg"
+        >
+          FullScreen
+        </button>
+      </div>
       {/* Content */}
       <div className="relative z-20 w-full h-full flex flex-col items-center justify-center ">
         {hasQuitted ? (
@@ -1055,10 +1134,33 @@ const Round = () => {
               </div>
 
               {/* Answer Input */}
+              {/* Answer Input */}
               <div className="w-full max-w-4xl mb-6">
                 <textarea
+                  ref={(el) => {
+                    if (el && !isSubmitted && !isLoading) {
+                      // Auto-focus on mount and when question changes
+                      el.focus();
+                    }
+                  }}
                   value={userAnswers[currentIndex] || ""}
                   onChange={handleAnswerChange}
+                  onMouseEnter={(e) => {
+                    if (!isSubmitted && !isLoading) {
+                      e.target.focus();
+                    }
+                  }}
+                  onClick={(e) => {
+                    if (!isSubmitted && !isLoading) {
+                      e.target.focus();
+                    }
+                  }}
+                  onTouchStart={(e) => {
+                    // For mobile devices
+                    if (!isSubmitted && !isLoading) {
+                      e.target.focus();
+                    }
+                  }}
                   className="w-full lg:h-32 lg:px-6 lg:py-10 h-[15vh] py-[5vh] px-[2vh] text-center bg-black/60 backdrop-blur-md border-2 border-white/30 rounded-3xl lg:text-xl text-[2.5vh] text-white placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/50 transition-all duration-300 resize-none"
                   placeholder={
                     questionInSet === 5
@@ -1066,9 +1168,9 @@ const Round = () => {
                       : "Write your answer here"
                   }
                   disabled={isSubmitted || isLoading}
+                  autoFocus
                 />
               </div>
-
               {/* Submit Button */}
               <button
                 onClick={handleManualSubmit}

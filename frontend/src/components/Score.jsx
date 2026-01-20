@@ -155,7 +155,7 @@ const Score = () => {
     if (!totalData) return 0;
     const totalPossibleScore = Object.values(allRoundsData).reduce(
       (sum, round) => {
-        return sum + round.totalQuestions * round.scoreMultiplier;
+        return sum + round.totalQuestions;
       },
       0,
     );

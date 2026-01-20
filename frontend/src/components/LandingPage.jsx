@@ -118,7 +118,21 @@ export default function LandingPage() {
       alert("Please log in to play the game.");
       window.location.href = "/login";
     } else {
-      window.location.href = `/round${index + 1}`;
+      // Request fullscreen before navigation
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch((err) => {
+          console.log("Fullscreen request failed:", err);
+        });
+      } else if (document.documentElement.webkitRequestFullscreen) {
+        document.documentElement.webkitRequestFullscreen();
+      } else if (document.documentElement.msRequestFullscreen) {
+        document.documentElement.msRequestFullscreen();
+      }
+
+      // Navigate after a brief delay to ensure fullscreen activates
+      setTimeout(() => {
+        window.location.href = `/round${index + 1}`;
+      }, 100);
     }
   };
 
@@ -200,7 +214,21 @@ export default function LandingPage() {
             {/* Play Button */}
             <div
               className="relative flex lg:w-[25vw] justify-center group items-center cursor-pointer"
-              onClick={() => setIsPanelOpen(true)}
+              onClick={() => {
+                setIsPanelOpen(true);
+                // Request fullscreen
+                if (document.documentElement.requestFullscreen) {
+                  document.documentElement.requestFullscreen().catch((err) => {
+                    console.log("Fullscreen request failed:", err);
+                  });
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                  // Safari
+                  document.documentElement.webkitRequestFullscreen();
+                } else if (document.documentElement.msRequestFullscreen) {
+                  // IE11
+                  document.documentElement.msRequestFullscreen();
+                }
+              }}
             >
               {/* Play Circle Slide In */}
               <div className="hidden lg:block  flex items-center absolute z-10 -translate-x-[11vw] group-hover:translate-x-0 transition-transform duration-500 ease-out-in">

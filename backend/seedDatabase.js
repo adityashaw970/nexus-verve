@@ -11,7 +11,7 @@ const ROUND_CONFIGS = [
     round: 1,
     name: "Round 1",
     scoreMultiplier: 1,
-    questionTime: 30000,
+    questionTime: 45000,
     startTime: process.env.ROUND1_START || "10 18 * * *",
     totalQuestions: 15,
   },
@@ -19,7 +19,7 @@ const ROUND_CONFIGS = [
     round: 2,
     name: "Round 2",
     scoreMultiplier: 2,
-    questionTime: 40000,
+    questionTime: 60000,
     startTime: process.env.ROUND2_START || "30 18 * * *",
     totalQuestions: 15,
   },
@@ -37,7 +37,7 @@ const ROUND_CONFIGS = [
     scoreMultiplier: 5,
     questionTime: 60000,
     startTime: process.env.ROUND4_START || "00 11 * * *",
-    totalQuestions: 10,
+    totalQuestions: 5,
   },
 ];
 
@@ -64,11 +64,11 @@ const QUESTIONS = [
   { day: "Day 1", round: 1, set: 3, order: 14, question: "Which city was the capital of British India before Delhi?", answer: "Kolkata" },
 
   // Round 2 - Set 1
-  { day: "Day 2", round: 2, set: 1, order: 0, question: "In the UK, the book is known as 'Harry Potter and the Philosopher's Stone.' What was the U.S. title?", answer: "Harry Potter and the Sorcerer's Stone" },
-  { day: "Day 2", round: 2, set: 1, order: 1, question: "J.K. Rowling conceived the idea for a famous character while on a delayed train in 1990. Who was that character?", answer: "Harry Potter" },
-  { day: "Day 2", round: 2, set: 1, order: 2, question: "The original UK cover art was illustrated by a 23-year-old English artist. Who was he?", answer: "Thomas Taylor" },
-  { day: "Day 2", round: 2, set: 1, order: 3, question: "Which real historical figure, known for alchemy, appears as a character in the book?", answer: "Nicolas Flamel" },
-  { day: "Day 2", round: 2, set: 1, order: 4, question: "This book sold over 120 million copies worldwide — what is its title?", answer: "Harry Potter and the Sorcerer's Stone" },
+  { day: "Day 2", round: 2, set: 1, order: 0, question: "I can recognize faces in your phone's photo, and tell who is who wherever you go.", answer: "Face Recognition" },
+  { day: "Day 2", round: 2, set: 1, order: 1, question: "I can translate words from one language to another, helping people understand one another.", answer: "Translator" },
+  { day: "Day 2", round: 2, set: 1, order: 2, question: "I learn from data and get smarter each day, predicting things in a clever way.", answer: "Machine Learning" },
+  { day: "Day 2", round: 2, set: 1, order: 3, question: "I can chat, answer questions, or tell you a joke — sometimes my answers make humans go 'whoa!'", answer: "Chatbot" },
+  { day: "Day 2", round: 2, set: 1, order: 4, question: "I am the technology behind all these things, learning, predicting, and making life zing. What am I?", answer: "AI" },
 
   // Round 2 - Set 2
   { day: "Day 2", round: 2, set: 2, order: 5, question: "What is the term for a genre of ancient Indian texts that contain myths, legends, and historical narratives?", answer: "Purana" },
@@ -85,11 +85,11 @@ const QUESTIONS = [
   { day: "Day 2", round: 2, set: 3, order: 14, question: "American singer-songwriter born in 1989, known for country and pop hits. Who is she?", answer: "Taylor Swift" },
 
   // Round 3 - Set 1
-  { day: "Day 3", round: 3, set: 1, order: 0, question: "Which country is known as 'The Land of the Rising Sun'?", answer: "Japan" },
-  { day: "Day 3", round: 3, set: 1, order: 1, question: "An American singer, songwriter, dancer, and cultural icon who debuted at age six in 1964. Who is he?", answer: "Michael Jackson" },
-  { day: "Day 3", round: 3, set: 1, order: 2, question: "A large fortified building serving as a royal residence in medieval times. What is it?", answer: "Castle" },
-  { day: "Day 3", round: 3, set: 1, order: 3, question: "A supernatural malevolent being believed to influence humans — what is it called?", answer: "Demon" },
-  { day: "Day 3", round: 3, set: 1, order: 4, question: "A warrior group from an anime hunting demons to avenge their family — name the anime.", answer: "Demon Slayer" },
+  { day: "Day 3", round: 3, set: 1, order: 0, question: "I am a delicious dish with cheese and tomato, everyone loves me, even the bravest bravado.?", answer:"Pizza" },
+  { day: "Day 3", round: 3, set: 1, order: 1, question: "I am a famous tower that leans to one side, tourists take photos here with pride", answer: "Leaning Tower of Pisa" },
+  { day: "Day 3", round: 3, set: 1, order: 2, question: "I am a city of canals and gondolas too, a romantic place where you can float through.", answer: "Venice" },
+  { day: "Day 3", round: 3, set: 1, order: 3, question: "I am a city with the Colosseum tall, gladiators once fought within my walls.", answer: "Rome" },
+  { day: "Day 3", round: 3, set: 1, order: 4, question: "I'm the country of pizza, towers, and art, with canals and ruins that capture the heart. Which country am I?", answer: "Italy" },
 
   // Round 3 - Set 2
   { day: "Day 3", round: 3, set: 2, order: 5, question: "What is the common nickname for a device used to lift heavy objects, especially vehicles?", answer: "Jack" },
@@ -106,18 +106,16 @@ const QUESTIONS = [
   { day: "Day 3", round: 3, set: 3, order: 14, question: "Which 2021 Telugu action-drama film revolves around red sandalwood smuggling?", answer: "Pushpa" },
 
   // Bonus Round - Set 1
-  { day: "Day 4", round: 4, set: 1, order: 0, question: "I can recognize faces in your phone's photo, and tell who is who wherever you go.", answer: "Face Recognition" },
-  { day: "Day 4", round: 4, set: 1, order: 1, question: "I can translate words from one language to another, helping people understand one another.", answer: "Translator" },
-  { day: "Day 4", round: 4, set: 1, order: 2, question: "I learn from data and get smarter each day, predicting things in a clever way.", answer: "Machine Learning" },
-  { day: "Day 4", round: 4, set: 1, order: 3, question: "I can chat, answer questions, or tell you a joke — sometimes my answers make humans go 'whoa!'", answer: "Chatbot" },
-  { day: "Day 4", round: 4, set: 1, order: 4, question: "I am the technology behind all these things, learning, predicting, and making life zing. What am I?", answer: "AI" },
+  { day: "Day 4", round: 4, set: 1, order: 0, question:
+            "It is related to cinema hall.We say it in it's English name.", answer: "1" },
+  { day: "Day 4", round: 4, set: 1, order: 1, question:
+            "It is not a food. It can be of different types.", answer: "2" },
+  { day: "Day 4", round: 4, set: 1, order: 2,  question:
+            "After watching the movie it is of no use.",answer: "3" },
+  { day: "Day 4", round: 4, set: 1, order: 3, question: "While entering the hall many people carry it in their hand.", answer: "4" },
+  { day: "Day 4", round: 4, set: 1, order: 4, question:"We use this to see 3D films.", answer: "3D glass" },
 
-  // Bonus Round - Set 2
-  { day: "Day 4", round: 4, set: 2, order: 5, question: "I am a delicious dish with cheese and tomato, everyone loves me, even the bravest bravado.", answer: "Pizza" },
-  { day: "Day 4", round: 4, set: 2, order: 6, question: "I am a famous tower that leans to one side, tourists take photos here with pride.", answer: "Leaning Tower of Pisa" },
-  { day: "Day 4", round: 4, set: 2, order: 7, question: "I am a city of canals and gondolas too, a romantic place where you can float through.", answer: "Venice" },
-  { day: "Day 4", round: 4, set: 2, order: 8, question: "I am a city with the Colosseum tall, gladiators once fought within my walls.", answer: "Rome" },
-  { day: "Day 4", round: 4, set: 2, order: 9, question: "I'm the country of pizza, towers, and art, with canals and ruins that capture the heart. Which country am I?", answer: "Italy" },
+
 ];
 
 async function seedDatabase() {

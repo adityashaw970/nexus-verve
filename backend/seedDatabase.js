@@ -113,7 +113,7 @@ const QUESTIONS = [
   { day: "Day 4", round: 4, set: 1, order: 2,  question:
             "After watching the movie it is of no use.",answer: "3" },
   { day: "Day 4", round: 4, set: 1, order: 3, question: "While entering the hall many people carry it in their hand.", answer: "4" },
-  { day: "Day 4", round: 4, set: 1, order: 4, question:"We use this to see 3D films.", answer: "3D glass" },
+  { day: "Day 4", round: 4, set: 1, order: 4, question:"Write the answer accordingly to the above Clues", answer: "3D glass" },
 
 
 ];

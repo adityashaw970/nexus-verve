@@ -66,40 +66,50 @@ const io = new Server(server, {
 
 // ================= REDIS ADAPTER =================
 
-let pubClient, subClient;
+let pubClient = null;
+let subClient = null;
 
-const redisOptions = {
-  maxRetriesPerRequest: 3,
-  enableReadyCheck: false,
-  lazyConnect: true,
-  retryStrategy(times) {
-    if (times > 3) return null; // Stop retrying after 3 attempts
-    return Math.min(times * 200, 1000);
-  },
-};
-
-try {
-  pubClient = new Redis(process.env.REDIS_URL, redisOptions);
-  subClient = pubClient.duplicate();
-
-  // CRITICAL: Add error handlers to prevent uncaught exceptions
-  pubClient.on("error", (err) => {
-    console.warn("Redis pubClient error (non-fatal):", err.message);
-  });
-  subClient.on("error", (err) => {
-    console.warn("Redis subClient error (non-fatal):", err.message);
+function createRedisClient() {
+  const client = new Redis(process.env.REDIS_URL, {
+    maxRetriesPerRequest: null, // MUST be null — prevents MaxRetriesPerRequestError crash
+    enableReadyCheck: false,
+    lazyConnect: true,
+    retryStrategy(times) {
+      if (times > 3) return null; // Give up after 3 retries
+      return Math.min(times * 200, 1000);
+    },
   });
 
-  pubClient.on("connect", () => console.log("✅ Redis connected"));
-
-  // Only attach adapter after successful connection
-  pubClient.on("ready", () => {
-    io.adapter(createAdapter(pubClient, subClient));
-    console.log("✅ Socket.IO Redis adapter enabled");
+  // Attach error handler IMMEDIATELY after creation — before any connection
+  client.on("error", (err) => {
+    console.warn("Redis error (non-fatal):", err.message);
   });
 
-} catch (err) {
-  console.warn("⚠️ Redis unavailable, running without adapter:", err.message);
+  return client;
+}
+
+if (process.env.REDIS_URL) {
+  try {
+    pubClient = createRedisClient();
+    subClient = createRedisClient(); // Create separately so both have error handlers
+
+    pubClient.on("connect", () => console.log("✅ Redis connected"));
+    pubClient.on("ready", () => {
+      try {
+        io.adapter(createAdapter(pubClient, subClient));
+        console.log("✅ Socket.IO Redis adapter enabled");
+      } catch (adapterErr) {
+        console.warn("⚠️ Redis adapter setup failed:", adapterErr.message);
+      }
+    });
+
+  } catch (err) {
+    console.warn("⚠️ Redis init failed, running without adapter:", err.message);
+    pubClient = null;
+    subClient = null;
+  }
+} else {
+  console.warn("⚠️ REDIS_URL not set, running without Redis adapter");
 }
 
 // ================= MIDDLEWARE =================

@@ -8,14 +8,11 @@ const os = require("os");
 const WORKERS = Math.min(2, os.cpus().length);
 
 if (cluster.isPrimary) {
-  // console.log(`Primary ${process.pid} running`);
-
   for (let i = 0; i < WORKERS; i++) {
     cluster.fork();
   }
 
   cluster.on("exit", (worker) => {
-    // console.log(`Worker ${worker.process.pid} died, restarting...`);
     cluster.fork();
   });
 
@@ -55,12 +52,12 @@ const server = http.createServer(app);
 // ===== SOCKET.IO - WEBSOCKET ONLY (NO POLLING) =====
 
 const io = new Server(server, {
-  transports: ["websocket"], // Critical: No polling!
+  transports: ["websocket"],
   pingInterval: 30000,
   pingTimeout: 70000,
-  maxHttpBufferSize: 300000, // 300KB limit
+  maxHttpBufferSize: 300000,
   perMessageDeflate: {
-    threshold: 1024 // Only compress > 1KB
+    threshold: 1024
   },
   connectTimeout: 45000,
   allowEIO3: true,
@@ -69,20 +66,46 @@ const io = new Server(server, {
 
 // ================= REDIS ADAPTER =================
 
-const pubClient = new Redis(process.env.REDIS_URL, {
+let pubClient, subClient;
+
+const redisOptions = {
   maxRetriesPerRequest: 3,
   enableReadyCheck: false,
   lazyConnect: true,
-});
+  retryStrategy(times) {
+    if (times > 3) return null; // Stop retrying after 3 attempts
+    return Math.min(times * 200, 1000);
+  },
+};
 
-const subClient = pubClient.duplicate();
+try {
+  pubClient = new Redis(process.env.REDIS_URL, redisOptions);
+  subClient = pubClient.duplicate();
 
-io.adapter(createAdapter(pubClient, subClient));
+  // CRITICAL: Add error handlers to prevent uncaught exceptions
+  pubClient.on("error", (err) => {
+    console.warn("Redis pubClient error (non-fatal):", err.message);
+  });
+  subClient.on("error", (err) => {
+    console.warn("Redis subClient error (non-fatal):", err.message);
+  });
+
+  pubClient.on("connect", () => console.log("✅ Redis connected"));
+
+  // Only attach adapter after successful connection
+  pubClient.on("ready", () => {
+    io.adapter(createAdapter(pubClient, subClient));
+    console.log("✅ Socket.IO Redis adapter enabled");
+  });
+
+} catch (err) {
+  console.warn("⚠️ Redis unavailable, running without adapter:", err.message);
+}
 
 // ================= MIDDLEWARE =================
 
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json({ limit: "512kb" })); // Reduced from 1MB
+app.use(express.json({ limit: "512kb" }));
 app.use(cookieParser());
 app.use(helmet());
 
@@ -91,21 +114,18 @@ const JWT_SECRET = process.env.JWT_SECRET || "shhh";
 // ================= MEMORY OPTIMIZATION =================
 
 const configCache = new Map();
-const userScoreCache = new Map(); // In-memory cache for quick score access
-const socketLastSeen = new Map(); // Track socket activity
+const userScoreCache = new Map();
+const socketLastSeen = new Map();
 
-// Periodic cleanup to prevent memory leaks
 setInterval(() => {
   const now = Date.now();
   
-  // Clear inactive sockets (2 min idle)
   for (const [id, time] of socketLastSeen) {
     if (now - time > 120000) {
       socketLastSeen.delete(id);
     }
   }
   
-  // Soft garbage collection if available
   if (global.gc) global.gc();
 }, 60000);
 
@@ -142,13 +162,11 @@ async function getRoundConfig(round) {
 // ================= QUIZ FLOW =================
 
 async function startQuiz(round) {
-  // Prevent duplicate starts
   if (quizActive && currentRound === round) {
     console.log(`Quiz already running for Round ${round}`);
     return;
   }
 
-  // Clear existing timer
   if (questionTimer) {
     clearTimeout(questionTimer);
     questionTimer = null;
@@ -164,19 +182,15 @@ async function startQuiz(round) {
   currentRound = round;
   currentQuestionIndex = 0;
 
-  // console.log(`Starting ${config.name} - Worker ${process.pid}`);
-  
   sendQuestion(config);
 }
 
 async function sendQuestion(config) {
-  // Clear existing timer
   if (questionTimer) {
     clearTimeout(questionTimer);
     questionTimer = null;
   }
 
-  // Check if quiz complete
   if (currentQuestionIndex >= config.totalQuestions) {
     io.emit("quiz-end", { round: currentRound });
     quizActive = false;
@@ -187,7 +201,6 @@ async function sendQuestion(config) {
   }
 
   try {
-    // Fetch single question (not all)
     const question = await Question.findOne({
       round: currentRound,
       order: currentQuestionIndex
@@ -198,7 +211,6 @@ async function sendQuestion(config) {
       return;
     }
 
-    // Emit to all clients
     io.emit("question", {
       question: question.question,
       index: currentQuestionIndex,
@@ -209,7 +221,6 @@ async function sendQuestion(config) {
 
     console.log(`Sent Q${currentQuestionIndex + 1}/${config.totalQuestions} - ${config.name}`);
 
-    // Schedule next question
     questionTimer = setTimeout(() => {
       currentQuestionIndex++;
       sendQuestion(config);
@@ -229,12 +240,10 @@ async function sendQuestion(config) {
 io.on("connection", (socket) => {
   socketLastSeen.set(socket.id, Date.now());
 
-  // Heartbeat to track active connections
   socket.on("heartbeat", () => {
     socketLastSeen.set(socket.id, Date.now());
   });
 
-  // Send current state to new connections
   socket.on("get-initial", async () => {
     if (!quizActive) return;
 
@@ -252,7 +261,6 @@ io.on("connection", (socket) => {
 
   socket.on("answer", async ({ userId, answer, questionIndex }) => {
     try {
-      // Validation
       if (!userId || typeof userId !== "string") {
         return socket.emit("error", { message: "Invalid userId" });
       }
@@ -265,7 +273,6 @@ io.on("connection", (socket) => {
         return socket.emit("error", { message: "No active quiz" });
       }
 
-      // Fetch question
       const config = await getRoundConfig(currentRound);
       
       const question = await Question.findOne({
@@ -277,13 +284,10 @@ io.on("connection", (socket) => {
         return socket.emit("error", { message: "Invalid question" });
       }
 
-      // Check answer
       const correctAnswer = question.answer.toLowerCase().trim();
       const userAnswer = answer[0].toLowerCase().trim();
       const isCorrect = containsWord(correctAnswer, userAnswer);
 
-      // ===== IN-MEMORY SCORE CACHE (Fast Response) =====
-      
       let cached = userScoreCache.get(userId) || {
         totalScore: 0,
         attempted: 0,
@@ -299,31 +303,27 @@ io.on("connection", (socket) => {
       
       userScoreCache.set(userId, cached);
 
-      // ===== REDIS LEADERBOARD (Async, Non-Blocking) =====
-      
-      if (isCorrect) {
+      // ===== REDIS LEADERBOARD (only if Redis is connected) =====
+      if (isCorrect && pubClient && pubClient.status === "ready") {
         pubClient.zincrby("leaderboard", config.scoreMultiplier, userId).catch(err => {
-          console.error("Redis leaderboard update failed:", err);
+          console.warn("Redis leaderboard update failed:", err.message);
         });
       }
 
-      // ===== RESPOND IMMEDIATELY (Don't wait for DB) =====
-      
+      // ===== RESPOND IMMEDIATELY =====
       socket.emit("score-update", {
         isCorrect,
         totalScore: cached.totalScore,
-        roundScore: cached.totalScore, // Simplified
+        roundScore: cached.totalScore,
         currentRound: currentRound,
         correctAnswer: question.answer,
       });
 
       // ===== DATABASE UPDATE (Async, Background) =====
-      
       setImmediate(async () => {
         try {
           const userObjId = new mongoose.Types.ObjectId(userId);
           
-          // Update round result
           let roundUpdate = await roundResultModel.findOne({
             userId: userObjId,
             round: currentRound
@@ -351,7 +351,6 @@ io.on("connection", (socket) => {
             await roundUpdate.save();
           }
 
-          // Update total score
           const allRounds = await roundResultModel.find({ userId: userObjId }).lean();
           
           let totalScore = 0;
@@ -479,11 +478,10 @@ app.get("/logout", (req, res) => {
   res.status(200).send("Logged out successfully");
 });
 
-// ===== LEADERBOARD (Redis-First, DB Fallback) =====
+// ===== LEADERBOARD =====
 
 app.get("/leaderboard", async (req, res) => {
   try {
-    // Use DB directly - most reliable for leaderboard
     const results = await quizResultModel
       .find()
       .sort({ totalScore: -1, createdAt: 1 })
@@ -491,7 +489,6 @@ app.get("/leaderboard", async (req, res) => {
       .limit(100)
       .lean();
 
-    // Format response to match expected structure
     const formattedResults = results.map(result => ({
       _id: result._id,
       userId: result.userId || { username: "Unknown User", email: "" },
@@ -582,13 +579,11 @@ mongoose.connect(process.env.MONGODB_URI, {
 }).then(async () => {
   console.log(`✅ MongoDB Connected - Worker ${process.pid}`);
   
-  // Load configs into cache
   const configs = await RoundConfig.find().lean();
   configs.forEach(config => {
     configCache.set(config.round, config);
   });
   
-  // Schedule quizzes
   scheduleQuizzes();
   
 }).catch((err) => console.error("❌ MongoDB connection error:", err));
@@ -605,7 +600,6 @@ async function scheduleQuizzes() {
     const job = cron.schedule(
       config.startTime,
       () => {
-        // console.log(`[Auto Start] ${config.name}`);
         startQuiz(config.round);
       },
       { timezone: "Asia/Kolkata" }
@@ -619,13 +613,12 @@ async function scheduleQuizzes() {
 // ================= GRACEFUL SHUTDOWN =================
 
 process.on("SIGTERM", async () => {
-  // console.log(`Worker ${process.pid} shutting down...`);
-  
   if (questionTimer) clearTimeout(questionTimer);
   scheduledJobs.forEach(job => job.stop());
   
-  await pubClient.quit();
-  await subClient.quit();
+  // FIX: Guard against undefined Redis clients
+  if (pubClient) await pubClient.quit().catch(() => {});
+  if (subClient) await subClient.quit().catch(() => {});
 
   server.close(() => {
     mongoose.connection.close(false, () => {
@@ -640,5 +633,5 @@ process.on("SIGTERM", async () => {
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
-  // console.log(`✅ Worker ${process.pid} listening on port ${PORT}`);
+  console.log(`✅ Worker ${process.pid} listening on port ${PORT}`);
 });
